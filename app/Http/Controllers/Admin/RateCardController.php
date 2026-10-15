@@ -227,6 +227,12 @@ class RateCardController extends AdminController
 
     // ------------------------------------------------------------------ promo codes
 
+    /** Human field names for validation messages ("The percent field is required", not "value"). @return array<string, string> */
+    private function promoAttributes(Request $request): array
+    {
+        return ['value' => $request->input('type') === 'fixed' ? 'amount' : 'percent', 'min_subtotal' => 'minimum subtotal', 'max_uses' => 'maximum uses', 'starts_at' => 'start date', 'ends_at' => 'end date'];
+    }
+
     /** @return array<string, mixed> */
     private function promoRules(?PromoCode $promo = null): array
     {
@@ -258,7 +264,7 @@ class RateCardController extends AdminController
 
     public function storePromo(Request $request): RedirectResponse
     {
-        $promo = PromoCode::create($this->promoAttrs($request->validate($this->promoRules())));
+        $promo = PromoCode::create($this->promoAttrs($request->validate($this->promoRules(), [], $this->promoAttributes($request))));
         Audit::log('promo.created', $promo, $promo->toArray());
 
         return back()->with('success', "Promo {$promo->code} created.");
@@ -267,7 +273,7 @@ class RateCardController extends AdminController
     public function updatePromo(Request $request, PromoCode $promo): RedirectResponse
     {
         $before = $promo->toArray();
-        $promo->update($this->promoAttrs($request->validate($this->promoRules($promo))));
+        $promo->update($this->promoAttrs($request->validate($this->promoRules($promo), [], $this->promoAttributes($request))));
         Audit::log('promo.updated', $promo, ['before' => $before, 'after' => $promo->fresh()?->toArray()]);
 
         return back()->with('success', "Promo {$promo->code} updated.");

@@ -1,0 +1,3 @@
+{"ops":["businesses.view","businesses.manage","campaigns.view","campaigns.manage","print_orders.view","print_orders.manage","pickup_points.manage","service_areas.manage","reports.view","support.view","support.reply","gnaf.view","design_orders.view","design_orders.manage"],
+"finance":["businesses.view","credits.manage","campaigns.view","print_orders.view","rate_card.manage","payments.view","payments.refund","reports.view","audit.view"],
+"support":["businesses.view","campaigns.view","print_orders.view","support.view","support.reply","content.manage","design_orders.view"]}

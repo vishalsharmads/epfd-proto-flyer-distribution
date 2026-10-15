@@ -19,6 +19,10 @@ function cell(key: string, v: string | number | null) {
     if (key.endsWith('_cents')) return money(Number(v));
     if (key === 'status') return titleCase(String(v));
     if (key === 'avg_coverage') return `${v}%`;
+    if (key === 'month' && /^\d{4}-\d{2}$/.test(String(v))) {
+        const [y, m] = String(v).split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+    }
     if (typeof v === 'number' || /^\d+$/.test(String(v))) return num(Number(v));
     return String(v);
 }

@@ -37,7 +37,7 @@ export interface Summary {
 /** Totals summary card (shown when not editing; screenshot 03). */
 export function SummaryCard({ s, admin }: { s: Summary; admin?: boolean }) {
     return (
-        <div className={cn(shell, 'w-full p-4 md:w-[300px]')} data-testid="summary-card">
+        <div className={cn(shell, 'max-h-full min-h-0 w-full overflow-y-auto p-4 md:w-[300px]')} data-testid="summary-card">
             <StatsBlock s={s} admin={admin} />
         </div>
     );

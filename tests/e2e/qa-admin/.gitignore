@@ -1,0 +1,3 @@
+.auth-*.json
+.results/
+results-partial.json

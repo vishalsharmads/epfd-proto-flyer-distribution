@@ -698,11 +698,14 @@ function PreviewCalculator({ draft, products, initialService = 'distribution' }:
 /* ---------------------------------------------------------------- matrix */
 
 function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props['matrix'] }) {
-    const [cells, setCells] = useState<Record<number, string>>({});
+    const initialCells = () => Object.fromEntries((matrix?.options ?? []).map((o) => [o.id, (o.unit_price_hc / 10000).toFixed(4)]));
+    // Initialise from props on mount (not only in the effect) so an edit made before the effect runs can't wipe the other cells.
+    const [cells, setCells] = useState<Record<number, string>>(initialCells);
     const [pct, setPct] = useState('');
     const [saving, setSaving] = useState(false);
     const [confirm, setConfirm] = useState(false);
-    useEffect(() => setCells(Object.fromEntries((matrix?.options ?? []).map((o) => [o.id, (o.unit_price_hc / 10000).toFixed(4)]))), [matrix]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => setCells(initialCells()), [matrix]);
     if (!matrix) return <EmptyState title="No print products" description="Seed the print catalogue first." />;
     const opts = matrix.options;
     const gsms = Array.from(new Set(opts.map((o) => o.gsm))).sort((a, b) => a - b);
@@ -778,7 +781,10 @@ function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props
                                                             min="0"
                                                             value={cells[o.id] ?? ''}
                                                             aria-invalid={!(parseFloat(cells[o.id] ?? '') > 0) || undefined}
-                                                            onChange={(e) => setCells({ ...cells, [o.id]: e.target.value })}
+                                                            onChange={(e) => {
+                                                                const v = e.target.value;
+                                                                setCells((c) => ({ ...c, [o.id]: v }));
+                                                            }}
                                                             className={`tabular h-9 min-w-24 text-right ${Math.round(parseFloat(cells[o.id] ?? '0') * 10000) !== o.unit_price_hc ? 'border-warning bg-warning-soft' : ''}`}
                                                         />
                                                     ) : (

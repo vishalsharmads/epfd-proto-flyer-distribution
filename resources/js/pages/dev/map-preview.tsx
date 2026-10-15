@@ -27,7 +27,7 @@ export default function MapPreview() {
             <Head title="Map preview" />
             <div className="flex h-dvh flex-col bg-bg">
                 <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-surface px-4 text-sm">
-                    <span className="font-semibold text-fg">Map preview {admin && '· admin'}</span>
+                    <h1 className="text-base font-semibold text-fg">Map preview {admin && '· admin'}</h1>
                     <span className="text-muted tabular-nums" data-testid="preview-state">
                         {state ? `${state.areas.length} areas · ${state.totals.letterboxes} letterboxes` : 'No changes yet'}
                     </span>

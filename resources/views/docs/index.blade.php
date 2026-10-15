@@ -11,6 +11,8 @@
         :root { --epfd-primary: #E00B33; --epfd-ink: #141414; --epfd-accent: #FFC446; --epfd-bg: #ffffff; --epfd-muted: #5b5b5b; }
         @media (prefers-color-scheme: dark) { :root { --epfd-bg: #ffffff; } }
         html, body { margin: 0; background: var(--epfd-bg); color: var(--epfd-ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+        /* Phones: wide markdown tables in the API description scroll inside themselves instead of squeezing to one word per line. */
+        @media (max-width: 640px) { .swagger-ui .markdown table, .swagger-ui .renderedMarkdown table { display: block; overflow-x: auto; } }
         .epfd-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 3px solid var(--epfd-primary); background: #fff; position: sticky; top: 0; z-index: 10; }
         .epfd-bar img { height: 40px; width: auto; }
         .epfd-bar h1 { font-size: 18px; margin: 0; font-weight: 700; }

@@ -41,7 +41,7 @@ export function LeftPanel(p: Props) {
                     <h2 id="audience-heading" className="text-lg font-semibold tracking-tight text-fg">
                         {p.readOnly ? 'Audience' : p.admin ? 'Split into runs' : 'Set your audience'}
                     </h2>
-                    {!p.readOnly && <p className="mt-1 text-sm text-muted">{p.admin ? 'Draw one area per run. Each run is collected by a different distributor.' : 'Choose where and who to deliver to. Each area will be collected by a different distributor.'}</p>}
+                    {!p.readOnly && <p className={cn('mt-1 text-sm text-muted', p.busy && 'max-md:hidden')}>{p.admin ? 'Draw one area per run. Each run is collected by a different distributor.' : 'Choose where and who to deliver to. Each area will be collected by a different distributor.'}</p>}
                 </div>
                 <button type="button" onClick={() => setCollapsed((c) => !c)} className="mt-1 grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 md:hidden" aria-label={collapsed ? 'Expand' : 'Collapse'}>
                     <ChevronDown className={cn('size-4 transition-transform', collapsed && 'rotate-180')} aria-hidden />
@@ -49,13 +49,13 @@ export function LeftPanel(p: Props) {
             </div>
             <div className={cn('flex min-h-0 flex-col overflow-y-auto px-5 pb-5', collapsed && 'max-md:hidden')}>
                 {!p.readOnly && (
-                    <div className="mt-4 flex flex-col gap-3" data-tour="filter">
+                    <div className={cn('mt-4 flex flex-col gap-3', p.busy && 'max-md:hidden')} data-tour="filter">
                         <ToggleRow icon={<House className="size-4" aria-hidden />} label="Include houses" checked={p.includeHouses} disabled={p.busy || (p.includeHouses && !p.includeUnits)} onChange={(v) => p.onToggle('houses', v)} />
                         <ToggleRow icon={<Building2 className="size-4" aria-hidden />} label="Include units" checked={p.includeUnits} disabled={p.busy || (p.includeUnits && !p.includeHouses)} onChange={(v) => p.onToggle('units', v)} />
                     </div>
                 )}
                 {p.areas.length > 0 && (
-                    <ul className="mt-4 flex flex-col gap-1 border-t border-border pt-3" aria-label="Areas" data-tour="areas">
+                    <ul className={cn('mt-4 flex flex-col gap-1 border-t border-border pt-3', p.busy && 'max-md:hidden')} aria-label="Areas" data-tour="areas">
                         {p.areas.map((a) => (
                             <li key={a.key} data-testid="area-row" className="group flex items-center gap-3 rounded-[12px] p-1.5 hover:bg-surface-2">
                                 <button type="button" disabled={p.busy || p.readOnly} onClick={() => p.onSelect(a.key)} className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] text-left focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-default" aria-label={`Edit ${a.index + 1}. ${a.name}`}>
@@ -78,10 +78,11 @@ export function LeftPanel(p: Props) {
                     </ul>
                 )}
                 {!p.readOnly && (
-                    <div className="mt-4 flex flex-col gap-2">
+                    <div className={cn('mt-4 flex flex-col gap-2', p.busy && 'max-md:mt-2')}>
                         {p.busy ? (
                             <>
-                                <Button variant="secondary" size="lg" disabled className="w-full">
+                                {/* Phones: while drawing, the sheet shrinks to just Cancel so the map stays usable. */}
+                                <Button variant="secondary" size="lg" disabled className="w-full max-md:hidden">
                                     Editing area…
                                 </Button>
                                 <Button variant="ghost" size="md" onClick={p.onCancel} kbd="Esc" className="w-full" data-testid="cancel-button">
@@ -94,7 +95,7 @@ export function LeftPanel(p: Props) {
                     </div>
                 )}
                 {p.areas.length > 0 && (
-                    <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm">
+                    <dl className={cn('mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm', p.busy && 'max-md:hidden')}>
                         <div>
                             <dt className="text-xs text-muted">Estimated letterboxes</dt>
                             <dd className="font-semibold text-fg tabular-nums">{num(p.totals.letterboxes)}</dd>
@@ -105,7 +106,7 @@ export function LeftPanel(p: Props) {
                         </div>
                     </dl>
                 )}
-                {p.footer && <div className="mt-4">{p.footer}</div>}
+                {p.footer && <div className={cn('mt-4', p.busy && 'max-md:hidden')}>{p.footer}</div>}
             </div>
         </section>
     );

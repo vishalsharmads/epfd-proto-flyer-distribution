@@ -89,7 +89,7 @@ function PointDialog({ point, onClose }: { point: Point | null; onClose: () => v
     };
     return (
         <Dialog open onOpenChange={(o) => !o && onClose()}>
-            <DialogContent title={point ? `Edit ${point.name}` : 'Add pickup point'}>
+            <DialogContent className="overflow-visible" title={point ? `Edit ${point.name}` : 'Add pickup point'}>
                 <form className="space-y-4" onSubmit={submit}>
                     <Field label="Name" error={form.errors.name}>
                         <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} placeholder="e.g. Rydalmere depot" />

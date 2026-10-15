@@ -20,8 +20,9 @@ class SecurityHeaders
         $h->set('X-Frame-Options', 'SAMEORIGIN');
         $h->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $h->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(self)');
-        $h->set('Cross-Origin-Opener-Policy', 'same-origin');
         if ($request->isSecure()) {
+            // Browsers ignore COOP on non-trustworthy (plain http) origins and log a console error for it.
+            $h->set('Cross-Origin-Opener-Policy', 'same-origin');
             $h->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
         $h->remove('X-Powered-By');

@@ -154,9 +154,9 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: Re
 export function StatTile({ label, value, hint, icon: Icon }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ComponentType<{ className?: string }> }) {
     return (
         <Card className="p-5">
-            <div className="flex items-center justify-between text-sm text-muted">
-                <span>{label}</span>
-                {Icon && <Icon className="size-4" aria-hidden />}
+            <div className="flex items-start justify-between gap-2 text-sm text-muted">
+                <span className="min-w-0">{label}</span>
+                {Icon && <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />}
             </div>
             <div className="tabular mt-2 text-2xl font-semibold tracking-tight text-fg">{value}</div>
             {hint && <div className="mt-1 text-xs text-subtle">{hint}</div>}

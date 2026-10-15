@@ -7,7 +7,7 @@ import AdminLayout from '@/layouts/admin-layout';
 import { dateTime } from '@/lib/utils';
 import { router, useForm } from '@inertiajs/react';
 import { FileText, Plus, Trash2 } from 'lucide-react';
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 interface Page {
     id: number;
@@ -64,13 +64,21 @@ export default function Content({ type, pages, counts }: { type: 'faq' | 'legal'
     const [del, setDel] = useState<Page | null>(null);
     const act = useAction();
     const current = selected === 'new' ? null : pages.find((p) => p.id === selected?.id) ?? null;
+    // After "Create" succeeds, switch the editor to the new page so a second click doesn't create a duplicate.
+    const [knownIds, setKnownIds] = useState(() => pages.map((p) => p.id));
+    useEffect(() => {
+        const added = pages.filter((p) => !knownIds.includes(p.id));
+        setKnownIds(pages.map((p) => p.id));
+        if (selected === 'new' && added.length > 0) setSelected(added.reduce((a, b) => (b.id > a.id ? b : a)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pages]);
     return (
         <AdminLayout title="Content" actions={<Button onClick={() => setSelected('new')}><Plus /> New {type === 'faq' ? 'FAQ' : 'legal page'}</Button>}>
             <Tabs value={type} onChange={(t) => router.get('/admin/content', { type: t })} tabs={[{ value: 'faq', label: 'FAQs', count: counts.faq ?? 0 }, { value: 'legal', label: 'Terms & legal', count: counts.legal ?? 0 }]} />
             {pages.length === 0 && selected !== 'new' ? (
                 <EmptyState icon={FileText} title={type === 'faq' ? 'No FAQs yet' : 'No legal pages yet'} description="Content appears on the public site once published." action={<Button onClick={() => setSelected('new')}>Create the first one</Button>} />
             ) : (
-                <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+                <div className="grid gap-6 lg:grid-cols-[240px_1fr] xl:grid-cols-[300px_1fr] [&>*]:min-w-0">
                     <nav aria-label="Pages" className="space-y-1">
                         {pages.map((p) => (
                             <button key={p.id} type="button" onClick={() => setSelected(p)} aria-current={current?.id === p.id ? 'true' : undefined} className={`flex w-full items-start justify-between gap-2 rounded-[10px] px-3 py-2.5 text-left text-sm ${current?.id === p.id ? 'bg-surface-2 font-medium' : 'hover:bg-surface-2/60'}`}>
@@ -99,8 +107,8 @@ function Editor({ page, type, onDelete }: { page: Page | null; type: 'faq' | 'le
         <Card>
             <CardBody>
                 <form className="space-y-4" onSubmit={submit}>
-                    <div className="grid gap-4 sm:grid-cols-[1fr_200px_100px]">
-                        <Field label={type === 'faq' ? 'Question' : 'Title'} error={form.errors.title}>
+                    <div className="grid gap-4 sm:grid-cols-[1fr_100px] xl:grid-cols-[1fr_200px_100px]">
+                        <Field label={type === 'faq' ? 'Question' : 'Title'} error={form.errors.title} className="sm:col-span-2 xl:col-span-1">
                             <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} />
                         </Field>
                         <Field label="Slug" optional error={form.errors.slug}>

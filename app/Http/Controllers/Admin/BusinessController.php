@@ -18,9 +18,10 @@ class BusinessController extends AdminController
     {
         $status = $request->string('status')->toString();
         $q = trim($request->string('q')->toString());
+        $digits = (string) preg_replace('/\D/', '', $q);
         $rows = Business::query()
             ->when(in_array($status, ['pending', 'approved', 'suspended'], true), fn ($w) => $w->where('status', $status))
-            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'ilike', "%{$q}%")->orWhere('email', 'ilike', "%{$q}%")->orWhere('abn', 'like', '%'.preg_replace('/\D/', '', $q).'%')->orWhere('contact_name', 'ilike', "%{$q}%")))
+            ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('name', 'ilike', "%{$q}%")->orWhere('email', 'ilike', "%{$q}%")->when($digits !== '', fn ($y) => $y->orWhere('abn', 'like', "%{$digits}%"))->orWhere('contact_name', 'ilike', "%{$q}%")))
             ->withCount(['campaigns', 'printOrders'])
             ->orderByRaw("status = 'pending' DESC")->latest('id')
             ->paginate(20)->withQueryString();

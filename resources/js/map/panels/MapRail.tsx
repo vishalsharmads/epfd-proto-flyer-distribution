@@ -32,7 +32,7 @@ const RailButton = forwardRef<HTMLButtonElement, { label: string; pressed?: bool
                 data-tour={tour}
                 {...rest}
                 className={cn(
-                    'grid size-11 place-items-center rounded-full border shadow-md transition-[background,color,transform] duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus [&_svg]:size-[18px]',
+                    'grid size-10 place-items-center md:size-11 rounded-full border shadow-md transition-[background,color,transform] duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus [&_svg]:size-[18px]',
                     pressed ? 'border-ink-900 bg-ink-900 text-white dark:border-white dark:bg-white dark:text-ink-900' : 'border-border bg-surface text-fg hover:bg-surface-2',
                 )}
             >
@@ -46,7 +46,7 @@ RailButton.displayName = 'RailButton';
 export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, minimal, className }: { minimal?: boolean; state: RailState; onToggle: (k: keyof RailState) => void; onHelp?: () => void; onRadius?: () => void; radiusKm?: number; onFound: (ll: LngLat, label: string) => void; className?: string }) {
     const [searchOpen, setSearchOpen] = useState(false);
     return (
-        <nav aria-label="Map tools" className={cn('flex flex-col gap-2', className)}>
+        <nav aria-label="Map tools" className={cn('flex flex-col gap-2', !minimal && 'max-md:grid max-md:grid-cols-2 max-md:[direction:rtl]', className)}>
             {onHelp && (
                 <RailButton label="Help and tour" onClick={onHelp} testId="rail-help" tour="help">
                     <CircleHelp aria-hidden />

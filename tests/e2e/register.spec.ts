@@ -28,7 +28,7 @@ test('register a new business with G-NAF address and email OTP', async ({ page, 
     await page.getByTestId('register-submit').click();
 
     await page.waitForURL(/\/verify/);
-    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.getByText(email, { exact: true }).first()).toBeVisible();
 
     const code = await otpFromMailpit(request, email);
     await page.getByTestId('otp-0').fill(code); // multi-digit input spreads across the boxes and auto-submits

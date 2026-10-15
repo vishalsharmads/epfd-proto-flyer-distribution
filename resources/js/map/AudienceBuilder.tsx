@@ -69,6 +69,9 @@ const phaseFor = (m: DrawMode): Phase => (m === 'pins' ? 'drawing' : m === 'trac
 let seq = 0;
 const newKey = () => `area-${Date.now().toString(36)}-${seq++}`;
 
+/** Phones: the panel is a full-width bottom sheet, so popovers open above it rather than to the side (off-screen). */
+const narrowViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+
 export default function AudienceBuilder({
     areas: initialAreas = [],
     pickup = null,
@@ -292,6 +295,22 @@ export default function AudienceBuilder({
         }
     };
 
+    // Saved areas handed in without an estimate (e.g. a draft reopened from the server) are estimated once on mount,
+    // so the list and totals don't show "Not estimated" / 0 letterboxes until the user edits something.
+    useEffect(() => {
+        if (readOnly) return;
+        let live = true;
+        for (const a of areas.filter((x) => !x.estimate)) {
+            requestEstimate(a.geometry, opts)
+                .then((r) => live && setAreas((list) => list.map((x) => (x.key === a.key && !x.estimate ? { ...x, estimate: r.estimate, quote: admin ? null : r.quote } : x))))
+                .catch(() => undefined);
+        }
+        return () => {
+            live = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const pickSuburb = async (s: SuburbHit) => {
         try {
             const b = await api<{ geometry: GeoJsonPolygon; approximate: boolean; name: string }>(`/api/v1/suburbs/${s.id}/boundary`);
@@ -395,7 +414,7 @@ export default function AudienceBuilder({
     const modeInfo = DRAW_MODES.find((m) => m.mode === (edit?.mode ?? lastMode))!;
 
     const footer = (
-        <div className="flex flex-col gap-0.5 text-[11px] leading-snug text-subtle">
+        <div className="flex flex-col gap-0.5 text-[11px] leading-snug text-muted">
             <p>Counts are estimates based on G-NAF address data. · {rail.satellite ? 'Imagery © Esri' : cfg.attribution}</p>
             <GnafAttribution className="line-clamp-2 max-w-[640px]" />
         </div>
@@ -487,7 +506,7 @@ export default function AudienceBuilder({
                                 <AddAreaButton onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} />
                             </div>
                         </PopoverAnchor>
-                        <PopoverContent side="right" align="start" sideOffset={16} collisionPadding={12}>
+                        <PopoverContent side={narrowViewport() ? 'top' : 'right'} align="start" sideOffset={narrowViewport() ? 8 : 16} collisionPadding={12}>
                             <DrawModeMenu selected={lastMode} onPick={startNew} />
                         </PopoverContent>
                     </Popover>
@@ -496,7 +515,7 @@ export default function AudienceBuilder({
             )}
 
             {/* right panel: editing card or totals */}
-            <div className="pointer-events-none absolute top-3 right-16 left-3 z-20 flex max-h-[42%] flex-col md:top-4 md:right-[76px] md:left-auto md:max-h-[calc(100%-5rem)]">
+            <div className="pointer-events-none absolute top-3 right-28 left-3 z-20 flex max-h-[42%] flex-col md:top-4 md:right-[76px] md:left-auto md:max-h-[calc(100%-5rem)]">
                 {edit ? (
                     <EditingPanel
                         name={edit.name}
@@ -582,7 +601,7 @@ export default function AudienceBuilder({
                 )}
             </div>
 
-            <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-2 md:flex">{footer}</div>
+            <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-7 md:flex">{footer}</div>
 
             {!readOnly && <Tour open={tourOpen} onClose={() => setTourOpen(false)} root={rootRef.current} />}
 

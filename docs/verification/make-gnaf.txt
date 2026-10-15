@@ -28,13 +28,49 @@ Importing NSW, VIC — release "AUG 2026", CRS GDA2020 (EPSG:7844)
  NSW ADDRESS_DEFAULT_GEOCODE already staged (5,224,340 rows) — skipping
  NSW ADDRESS_SITE already staged (5,224,340 rows) — skipping
  NSW PRIMARY_SECONDARY already staged (1,878,993 rows) — skipping
- VIC STATE 1 rows 0.2s
- VIC LOCALITY 2,996 rows 0.1s
- VIC STREET_LOCALITY 207,435 rows 0.6s
- VIC ADDRESS_DETAIL 4,411,310 rows 7.1s
- VIC ADDRESS_DEFAULT_GEOCODE 4,411,310 rows 3.2s
- VIC ADDRESS_SITE 4,411,310 rows 2.6s
- VIC PRIMARY_SECONDARY 1,280,861 rows 1.9s
- NSW addresses 4,923,145 rows (301,195 aliases, 0 retired, 0 without geocode skipped) 179.5s
-make: *** [gnaf] Terminated: 15
-make gnaf  0.79s user 0.65s system 0% cpu 4:13:40.99 total
+ VIC STATE already staged (1 rows) — skipping
+ VIC LOCALITY already staged (2,996 rows) — skipping
+ VIC STREET_LOCALITY already staged (207,435 rows) — skipping
+ VIC ADDRESS_DETAIL already staged (4,411,310 rows) — skipping
+ VIC ADDRESS_DEFAULT_GEOCODE already staged (4,411,310 rows) — skipping
+ VIC ADDRESS_SITE already staged (4,411,310 rows) — skipping
+ VIC PRIMARY_SECONDARY already staged (1,280,861 rows) — skipping
+ NSW: transforming into addresses…
+ NSW addresses 4,923,145 rows (301,195 aliases, 0 retired, 0 without geocode skipped) 244.4s
+ NSW: flagging unit-building primaries…
+ NSW: 182079 primaries flagged via PRIMARY_SECONDARY
+ NSW: 0 primaries flagged via site/street-number grouping
+ VIC: transforming into addresses…
+ VIC addresses 4,187,113 rows (224,197 aliases, 0 retired, 0 without geocode skipped) 240.0s
+ VIC: flagging unit-building primaries…
+ VIC: 171622 primaries flagged via PRIMARY_SECONDARY
+ VIC: 0 primaries flagged via site/street-number grouping
+Building indexes (GIST geom, btree state/locality/postcode, GIN trigram search) + ANALYZE…
+ done in 159.1s
+Building suburb boundaries (ST_ConcaveHull over address points)…
+ 7075 derived suburb boundaries
+
+Import #4 completed in 1405.8 s
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+| State | Addresses | Houses | Units | Primary w/ units | Commercial | Letterboxes | Aliases skipped | Retired skipped | No geocode |
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+| NSW | 4,923,145 | 3,156,770 | 1,766,375 | 182,079 | 67,790 | 4,673,276 | 301,195 | 0 | 0 |
+| VIC | 4,187,113 | 2,995,860 | 1,191,253 | 171,622 | 57,867 | 3,957,624 | 224,197 | 0 | 0 |
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+House/unit split for known suburbs (estimated letterboxes, anti double-count applied):
++------------+-------+----------+--------+--------+--------------------+-------------+
+| Suburb | State | Boundary | Houses | Units | Primaries excluded | Letterboxes |
++------------+-------+----------+--------+--------+--------------------+-------------+
+| Abbotsford | NSW | derived | 952 | 1,801 | 192 | 2,753 |
+| Bondi | NSW | derived | 1,078 | 5,701 | 492 | 6,779 |
+| Ermington | NSW | derived | 3,709 | 2,290 | 168 | 5,999 |
+| Newcastle | NSW | derived | 657 | 5,212 | 328 | 5,869 |
+| Parramatta | NSW | derived | 2,292 | 21,027 | 819 | 23,319 |
+| Richmond | NSW | derived | 2,022 | 1,580 | 336 | 3,602 |
+| Rydalmere | NSW | derived | 2,220 | 1,718 | 135 | 3,938 |
+| Wollongong | NSW | derived | 2,656 | 14,161 | 1,262 | 16,817 |
+| Abbotsford | VIC | derived | 2,467 | 5,666 | 215 | 8,133 |
+| Fitzroy | VIC | derived | 3,289 | 5,771 | 504 | 9,060 |
+| Richmond | VIC | derived | 8,667 | 13,405 | 1,022 | 22,072 |
++------------+-------+----------+--------+--------+--------------------+-------------+
+make gnaf  0.14s user 0.14s system 0% cpu 23:26.25 total

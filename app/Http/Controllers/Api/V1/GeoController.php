@@ -17,10 +17,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * @tags Geo & estimates
- *
  * Coordinates are [longitude, latitude] in GDA2020 (EPSG:7844). WGS84 browser coordinates are accepted
  * as-is (≈1.8 m offset, negligible for letterbox counting).
+ *
+ * @tags Geo & estimates
  */
 class GeoController extends Controller
 {

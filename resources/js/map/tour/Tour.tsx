@@ -73,9 +73,13 @@ export function Tour({ open, onClose, root }: { open: boolean; onClose: () => vo
             } else if (rx - 16 - c.width > 0) {
                 left = rx - 16 - c.width;
                 top = ry;
-            } else {
+            } else if (ry + r.height + 12 + c.height <= host.height || ry - 12 - c.height < 0) {
                 left = rx;
                 top = ry + r.height + 12;
+            } else {
+                // No room below (e.g. anchor inside the mobile bottom sheet): sit above it.
+                left = rx;
+                top = ry - 12 - c.height;
             }
         }
         top = Math.max(12, Math.min(top, host.height - c.height - 12));

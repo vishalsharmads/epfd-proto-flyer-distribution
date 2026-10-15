@@ -1,62 +1,62 @@
-addresses table: 4,964,409 rows. Target: 5,000 letterboxes in < 1000 ms (uncached).
-+----------------+-------------+----------------+---------------+---------------+---------------------+
+addresses table: 9,119,984 rows. Target: 5,000 letterboxes in < 1000 ms (uncached).
++----------------+-------------+----------------+---------------+---------------+--------+
 | Probe | Letterboxes | Houses / Units | Est. distance | p50 / max | Result |
-+----------------+-------------+----------------+---------------+---------------+---------------------+
-| Parramatta NSW | 5,456 | 431 / 5,025 | 25.03 km | 12 ms / 68 ms | PASS |
-| Rydalmere NSW | 5,806 | 2,255 / 3,551 | 75.17 km | 20 ms / 23 ms | PASS |
-| Bondi NSW | 5,713 | 791 / 4,922 | 24.02 km | 16 ms / 16 ms | PASS |
-| Penrith NSW | 5,014 | 978 / 4,036 | 40.44 km | 15 ms / 16 ms | PASS |
-| Richmond VIC | 5,808 | 2,693 / 3,115 | 45.38 km | 20 ms / 40 ms | PASS |
-| Werribee VIC | — | — | — | — | no data loaded here |
-+----------------+-------------+----------------+---------------+---------------+---------------------+
++----------------+-------------+----------------+---------------+---------------+--------+
+| Parramatta NSW | 5,456 | 431 / 5,025 | 25.53 km | 14 ms / 76 ms | PASS |
+| Rydalmere NSW | 5,806 | 2,255 / 3,551 | 74.9 km | 21 ms / 26 ms | PASS |
+| Bondi NSW | 5,713 | 791 / 4,922 | 23.95 km | 17 ms / 18 ms | PASS |
+| Penrith NSW | 5,014 | 978 / 4,036 | 40.36 km | 15 ms / 15 ms | PASS |
+| Richmond VIC | 5,054 | 2,499 / 2,555 | 42.37 km | 21 ms / 38 ms | PASS |
+| Werribee VIC | 5,006 | 2,790 / 2,216 | 96.83 km | 23 ms / 23 ms | PASS |
++----------------+-------------+----------------+---------------+---------------+--------+
 EXPLAIN (ANALYZE, BUFFERS) — counting query (Parramatta probe):
- Subquery Scan on counts (cost=138453.53..138453.54 rows=1 width=24) (actual time=12.838..12.840 rows=1 loops=1)
- Buffers: shared hit=3628
+ Subquery Scan on counts (cost=247252.67..247252.68 rows=1 width=24) (actual time=14.450..14.452 rows=1 loops=1)
+ Buffers: shared hit=5419
  CTE z
  -> Result (cost=0.00..0.01 rows=1 width=36) (actual time=0.000..0.000 rows=1 loops=1)
  CTE sel
- -> Nested Loop (cost=0.41..8227.58 rows=4707 width=52) (actual time=0.036..4.759 rows=5456 loops=1)
- Buffers: shared hit=3628
+ -> Nested Loop (cost=0.42..15091.30 rows=8624 width=52) (actual time=0.053..6.286 rows=5456 loops=1)
+ Buffers: shared hit=5419
  -> CTE Scan on z (cost=0.00..0.02 rows=1 width=32) (actual time=0.001..0.001 rows=1 loops=1)
- -> Index Scan using addresses_geom_gist on addresses a (cost=0.41..8222.85 rows=471 width=52) (actual time=0.035..4.455 rows=5456 loops=1)
+ -> Index Scan using addresses_geom_gist on addresses a (cost=0.42..15082.66 rows=862 width=52) (actual time=0.051..5.967 rows=5456 loops=1)
  Index Cond: (geom && z.g)
  Filter: ((NOT is_commercial) AND (NOT is_primary_with_units) AND ((address_kind)::text = ANY ('{house,unit}'::text[])) AND st_intersects(geom, z.g))
  Rows Removed by Filter: 537
- Buffers: shared hit=3628
+ Buffers: shared hit=5419
  CTE dp
- -> Unique (cost=62184.21..62219.51 rows=4707 width=126) (actual time=5.149..5.750 rows=468 loops=1)
+ -> Unique (cost=113969.38..114034.06 rows=8624 width=126) (actual time=5.031..5.595 rows=468 loops=1)
  InitPlan 3
- -> CTE Scan on z z_1 (cost=0.00..0.02 rows=1 width=4) (actual time=0.000..0.000 rows=1 loops=1)
- -> Sort (cost=62184.19..62195.96 rows=4707 width=126) (actual time=5.147..5.286 rows=5456 loops=1)
+ -> CTE Scan on z z_1 (cost=0.00..0.02 rows=1 width=4) (actual time=0.001..0.001 rows=1 loops=1)
+ -> Sort (cost=113969.36..113990.92 rows=8624 width=126) (actual time=5.031..5.151 rows=5456 loops=1)
  Sort Key: sel_1.street, (COALESCE((sel_1.num)::text, st_astext(sel_1.geom)))
  Sort Method: quicksort Memory: 551kB
- -> CTE Scan on sel sel_1 (cost=0.00..61897.05 rows=4707 width=126) (actual time=0.009..1.659 rows=5456 loops=1)
+ -> CTE Scan on sel sel_1 (cost=0.00..113405.60 rows=8624 width=126) (actual time=0.012..1.624 rows=5456 loops=1)
  InitPlan 5
- -> Aggregate (cost=59352.76..59352.77 rows=1 width=8) (actual time=6.367..6.367 rows=1 loops=1)
- -> Subquery Scan on seg (cost=1.27..59348.84 rows=1569 width=8) (actual time=5.512..6.354 rows=414 loops=1)
+ -> Aggregate (cost=108778.38..108778.39 rows=1 width=8) (actual time=6.319..6.320 rows=1 loops=1)
+ -> Subquery Scan on seg (cost=2.45..108771.19 rows=2875 width=8) (actual time=5.486..6.306 rows=414 loops=1)
  Filter: (seg.d <= '400'::double precision)
  Rows Removed by Filter: 54
- -> WindowAgg (cost=1.27..59290.00 rows=4707 width=90) (actual time=5.509..6.332 rows=468 loops=1)
- -> Incremental Sort (cost=1.18..299.52 rows=4707 width=114) (actual time=5.503..6.117 rows=468 loops=1)
+ -> WindowAgg (cost=2.45..108663.39 rows=8624 width=90) (actual time=5.484..6.285 rows=468 loops=1)
+ -> Incremental Sort (cost=2.36..583.11 rows=8624 width=114) (actual time=5.480..6.079 rows=468 loops=1)
  Sort Key: dp.street, (COALESCE((dp.num % 2), 2)), dp.num, (st_x(dp.p)), (st_y(dp.p))
  Presorted Key: dp.street
  Full-sort Groups: 7 Sort Method: quicksort Average Memory: 30kB Peak Memory: 30kB
  Pre-sorted Groups: 8 Sort Method: quicksort Average Memory: 38kB Peak Memory: 38kB
- -> CTE Scan on dp (cost=0.00..129.44 rows=4707 width=114) (actual time=5.153..5.826 rows=468 loops=1)
+ -> CTE Scan on dp (cost=0.00..237.16 rows=8624 width=114) (actual time=5.033..5.663 rows=468 loops=1)
  InitPlan 6
- -> Aggregate (cost=8512.43..8512.44 rows=1 width=8) (actual time=0.323..0.323 rows=1 loops=1)
- -> WindowAgg (cost=3480.94..8509.93 rows=200 width=40) (actual time=0.311..0.321 rows=26 loops=1)
- -> Sort (cost=3480.93..3481.43 rows=200 width=64) (actual time=0.309..0.310 rows=26 loops=1)
+ -> Aggregate (cost=9090.18..9090.19 rows=1 width=8) (actual time=0.310..0.310 rows=1 loops=1)
+ -> WindowAgg (cost=4058.70..9087.68 rows=200 width=40) (actual time=0.299..0.309 rows=26 loops=1)
+ -> Sort (cost=4058.68..4059.18 rows=200 width=64) (actual time=0.298..0.298 rows=26 loops=1)
  Sort Key: (st_geohash(st_transform(cent.c, 4326), 10))
  Sort Method: quicksort Memory: 26kB
- -> Subquery Scan on cent (cost=0.00..3473.28 rows=200 width=64) (actual time=0.099..0.282 rows=26 loops=1)
- -> GroupAggregate (cost=0.00..946.28 rows=200 width=90) (actual time=0.094..0.261 rows=26 loops=1)
+ -> Subquery Scan on cent (cost=0.00..4051.04 rows=200 width=64) (actual time=0.088..0.271 rows=26 loops=1)
+ -> GroupAggregate (cost=0.00..1524.04 rows=200 width=90) (actual time=0.084..0.252 rows=26 loops=1)
  Group Key: dp_1.street
- -> CTE Scan on dp dp_1 (cost=0.00..94.14 rows=4707 width=90) (actual time=0.000..0.027 rows=468 loops=1)
- -> Aggregate (cost=141.21..141.22 rows=1 width=16) (actual time=6.145..6.145 rows=1 loops=1)
- Buffers: shared hit=3628
- -> CTE Scan on sel (cost=0.00..94.14 rows=4707 width=24) (actual time=0.036..5.749 rows=5456 loops=1)
- Buffers: shared hit=3628
- Planning Time: 0.272 ms
- Execution Time: 12.901 ms
-RESULT: PASS — worst case 68 ms < 1000 ms
+ -> CTE Scan on dp dp_1 (cost=0.00..172.48 rows=8624 width=90) (actual time=0.000..0.027 rows=468 loops=1)
+ -> Aggregate (cost=258.72..258.73 rows=1 width=16) (actual time=7.817..7.818 rows=1 loops=1)
+ Buffers: shared hit=5419
+ -> CTE Scan on sel (cost=0.00..172.48 rows=8624 width=24) (actual time=0.053..7.344 rows=5456 loops=1)
+ Buffers: shared hit=5419
+ Planning Time: 0.276 ms
+ Execution Time: 14.519 ms
+RESULT: PASS — worst case 76 ms < 1000 ms

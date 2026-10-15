@@ -33,12 +33,26 @@ interface Props {
 
 function Counts({ data }: { data: Record<string, unknown> | null }) {
     if (!data || Object.keys(data).length === 0) return <p className="text-sm text-muted">Not recorded.</p>;
+    const entries = Object.entries(data);
+    // Full releases record counts per state ({NSW: {houses: …}}); render each state as its own group.
+    if (entries.every(([, v]) => v && typeof v === 'object' && !Array.isArray(v))) {
+        return (
+            <div className="space-y-4">
+                {entries.map(([k, v]) => (
+                    <div key={k}>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">{k}</p>
+                        <Counts data={v as Record<string, unknown>} />
+                    </div>
+                ))}
+            </div>
+        );
+    }
     return (
-        <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1.5 text-sm">
-            {Object.entries(data).map(([k, v]) => (
+        <dl className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1.5 text-sm">
+            {entries.map(([k, v]) => (
                 <div key={k} className="contents">
-                    <dt className="text-muted">{titleCase(k)}</dt>
-                    <dd className="tabular text-right">{typeof v === 'number' ? num(v) : typeof v === 'object' ? <code className="text-xs">{JSON.stringify(v)}</code> : String(v)}</dd>
+                    <dt className="min-w-0 break-words text-muted">{titleCase(k)}</dt>
+                    <dd className="tabular text-right">{typeof v === 'number' ? num(v) : typeof v === 'object' ? <code className="text-xs break-all">{JSON.stringify(v)}</code> : String(v)}</dd>
                 </div>
             ))}
         </dl>
@@ -58,7 +72,7 @@ export default function GnafStatus({ current, releases, by_state, suburbs, impor
                             This is the bundled G-NAF sample, not a full release. Letterbox counts only cover the sample area.
                         </Alert>
                     )}
-                    <div className="grid gap-6 xl:grid-cols-3">
+                    <div className="grid gap-6 xl:grid-cols-3 [&>*]:min-w-0">
                         <Card className="xl:col-span-2">
                             <CardHeader title={`Current release · ${current.label}`} action={<StatusBadge status={current.status} />} />
                             <CardBody>
@@ -114,7 +128,7 @@ export default function GnafStatus({ current, releases, by_state, suburbs, impor
                         </Table>
                     </Card>
 
-                    <div className="grid gap-6 xl:grid-cols-3">
+                    <div className="grid gap-6 xl:grid-cols-3 [&>*]:min-w-0">
                         <Card>
                             <CardHeader title="Kind counts" description="Recorded at import" />
                             <CardBody>
@@ -137,7 +151,7 @@ export default function GnafStatus({ current, releases, by_state, suburbs, impor
                 </div>
             )}
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <div className="mt-6 grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
                 <Card>
                     <CardHeader title="Official boundary imports" description="php artisan suburbs:import {path} --source=ABS" />
                     {imports.length === 0 ? (

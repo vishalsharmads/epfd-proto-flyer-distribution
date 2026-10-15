@@ -132,6 +132,7 @@
 }
 
 :root.dark {
+    color-scheme: dark; /* native date pickers, selects and scrollbars follow the theme */
   --color-bg: #0b0c0f;
   --color-surface: #15171c;
   --color-surface-2: #1d2027;

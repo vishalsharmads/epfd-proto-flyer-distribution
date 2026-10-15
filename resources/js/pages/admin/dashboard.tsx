@@ -52,10 +52,10 @@ export default function Dashboard({ kpis, jobs, revenue, activity, live }: Props
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={jobsData} margin={{ left: -16 }}>
                                         <CartesianGrid vertical={false} strokeOpacity={0.15} />
-                                        <XAxis dataKey="label" tick={axis} interval={0} angle={-25} textAnchor="end" height={60} />
+                                        <XAxis dataKey="label" tick={axis} interval={0} angle={-30} textAnchor="end" height={84} tickFormatter={(l: string) => (l.length > 16 ? `${l.slice(0, 15)}…` : l)} />
                                         <YAxis allowDecimals={false} tick={axis} />
                                         <Tooltip cursor={{ fillOpacity: 0.06 }} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
-                                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                                        <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, paddingBottom: 8 }} />
                                         <Bar dataKey="campaigns" name="Distribution" stackId="a" fill="var(--color-primary, #e00b33)" radius={[0, 0, 0, 0]} />
                                         <Bar dataKey="print" name="Print" stackId="a" fill="var(--color-text, #141414)" radius={[4, 4, 0, 0]} />
                                     </BarChart>
