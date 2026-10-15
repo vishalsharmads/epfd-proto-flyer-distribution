@@ -96,7 +96,7 @@ export default function BusinessShow({ business, credit_balance_cents, ledger, c
                             <Dl
                                 items={[
                                     ['Contact', business.contact_name],
-                                    ['Email', <a href={`mailto:${business.email}`} className="text-primary hover:underline">{business.email}</a>],
+                                    ['Email', <a key="email" href={`mailto:${business.email}`} className="text-primary hover:underline">{business.email}</a>],
                                     ['Mobile', business.mobile],
                                     ['ABN', business.abn],
                                     ['Industry', business.industry],

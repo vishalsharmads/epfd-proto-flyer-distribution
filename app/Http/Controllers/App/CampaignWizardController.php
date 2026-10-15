@@ -160,7 +160,7 @@ class CampaignWizardController extends Controller
     public function nameCheck(Request $request): JsonResponse
     {
         $data = $request->validate(['name' => ['required', 'string', 'max:80'], 'campaign_id' => ['nullable', 'integer']]);
-        $available = $this->campaigns->nameAvailable($request->user()->business, $data['name'], $data['campaign_id'] ?? null);
+        $available = $this->campaigns->nameAvailable($request->user()->business, $data['name'], isset($data['campaign_id']) ? (int) $data['campaign_id'] : null);
 
         return response()->json(['available' => $available, 'message' => $available ? 'This name is available' : 'You already have a campaign with this name.']);
     }

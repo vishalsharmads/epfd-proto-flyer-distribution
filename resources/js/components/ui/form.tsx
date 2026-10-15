@@ -52,7 +52,8 @@ export function Field({ label, htmlFor, hint, error, success, optional, classNam
                     {optional && <span className="ml-1 font-normal text-subtle">(optional)</span>}
                 </Label>
             )}
-            {React.cloneElement(children, { id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy })}
+            {/* With an explicit htmlFor the child is a wrapper around the control, so the control carries its own id/aria. */}
+            {htmlFor ? children : React.cloneElement(children, { id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy })}
             {error ? (
                 <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-sm text-danger">
                     <AlertCircle className="size-4 shrink-0" aria-hidden /> {error}

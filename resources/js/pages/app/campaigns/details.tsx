@@ -127,10 +127,10 @@ export default function CampaignDetails({ campaign: initial, options: initialOpt
                                     }}
                                 />
                             </Field>
-                            <Field label="Available from" error={errs.available_from} hint={isToday ? 'Today — earliest available' : `Flyers ready for collection from ${date(c.available_from)}`}>
+                            <Field label="Available from" htmlFor="available-from" error={errs.available_from} hint={isToday ? 'Today — earliest available' : `Flyers ready for collection from ${date(c.available_from)}`}>
                                 <div className="relative">
                                     <Calendar className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle" aria-hidden />
-                                    <Input type="date" data-testid="available-from" className="pl-10" min={today()} value={c.available_from ?? ''} onChange={(e) => e.target.value && set({ available_from: e.target.value })} />
+                                    <Input id="available-from" aria-invalid={errs.available_from ? true : undefined} aria-describedby={errs.available_from ? 'available-from-error' : 'available-from-hint'} type="date" data-testid="available-from" className="pl-10" min={today()} value={c.available_from ?? ''} onChange={(e) => e.target.value && set({ available_from: e.target.value })} />
                                 </div>
                             </Field>
                         </fieldset>

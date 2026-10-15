@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';

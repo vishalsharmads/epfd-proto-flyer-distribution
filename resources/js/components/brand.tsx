@@ -60,12 +60,12 @@ export function SiteFooter() {
                 <address className="text-sm text-muted not-italic">
                     <p className="font-semibold text-fg">Contact</p>
                     <p className="mt-2">
-                        <a href={`tel:${brand.phone.replace(/\s/g, '')}`} className="hover:text-fg">
+                        <a href={`tel:${brand.phone.replace(/\s/g, '')}`} className="inline-block py-1 hover:text-fg">
                             {brand.phone}
                         </a>
                     </p>
                     <p>
-                        <a href={`mailto:${brand.email}`} className="hover:text-fg">
+                        <a href={`mailto:${brand.email}`} className="inline-block py-1 hover:text-fg">
                             {brand.email}
                         </a>
                     </p>

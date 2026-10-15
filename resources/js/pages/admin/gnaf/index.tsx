@@ -67,7 +67,7 @@ export default function GnafStatus({ current, releases, by_state, suburbs, impor
                                         ['CRS', `${current.crs} · EPSG:${current.srid} (geographic); distances in GDA2020 MGA zones`],
                                         ['Imported', dateTime(current.imported_at)],
                                         ['States', current.states.join(', ')],
-                                        ['Source', <code className="text-xs break-all">{current.source_path ?? '—'}</code>],
+                                        ['Source', <code key="source" className="text-xs break-all">{current.source_path ?? '—'}</code>],
                                         ['Sample', current.is_sample ? <Badge tone="warning">Yes</Badge> : 'No'],
                                     ]}
                                 />

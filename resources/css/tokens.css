@@ -58,13 +58,13 @@
   --color-border-strong: #cfd1d6;
   --color-text: #141414;
   --color-text-muted: #5b5e68;
-  --color-text-subtle: #767985;
+  --color-text-subtle: #676a75; /* was #767985 — 4.33:1 on white failed WCAG AA (a11y.spec) */
   --color-primary: var(--brand-600);
   --color-primary-hover: var(--brand-700);
   --color-primary-fg: #ffffff;
   --color-primary-soft: var(--brand-50);
   --color-focus: #2563eb;
-  --color-success: #0f8a4f;
+  --color-success: #0b7a45; /* was #0f8a4f — 3.94:1 on success-soft failed WCAG AA (a11y.spec) */
   --color-success-soft: #e7f6ee;
   --color-warning: #a35b00;
   --color-warning-soft: #fff4e0;

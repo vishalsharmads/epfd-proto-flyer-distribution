@@ -26,7 +26,7 @@ export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 type Tone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
 const tones: Record<Tone, string> = {
     neutral: 'bg-surface-2 text-muted border-border',
-    brand: 'bg-primary-soft text-primary border-transparent',
+    brand: 'bg-primary-soft text-primary-hover border-transparent', // text-primary on primary-soft was 4.48:1 (axe)
     success: 'bg-success-soft text-success border-transparent',
     warning: 'bg-warning-soft text-warning border-transparent',
     danger: 'bg-danger-soft text-danger border-transparent',

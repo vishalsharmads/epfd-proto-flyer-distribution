@@ -161,3 +161,12 @@
     transition-duration: 0ms !important;
   }
 }
+
+/* a11y: Sonner's richColors defaults fail WCAG AA on their tinted backgrounds (e.g. success #008a2e on
+   #ecfdf3 = 4.25:1). Re-point the light-theme text colours at our AA-checked semantic tokens. */
+html [data-sonner-toaster][data-sonner-theme='light'] {
+  --success-text: var(--color-success);
+  --info-text: var(--color-info);
+  --warning-text: var(--color-warning);
+  --error-text: var(--color-danger);
+}
