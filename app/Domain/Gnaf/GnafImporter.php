@@ -186,6 +186,24 @@ final class GnafImporter
         DB::statement("COPY {$stg} ({$colList}) FROM {$source} WITH ({$opts})");
     }
 
+    /**
+     * Fill addresses.locality_pid from the staged ADDRESS_DETAIL, for addresses imported before suburbs were keyed
+     * by locality. Returns null when the state's staging table is gone (re-run `gnaf:import --fresh` instead).
+     */
+    public function backfillLocalityPids(string $state): ?int
+    {
+        $ad = $this->stgTable($state, 'ADDRESS_DETAIL');
+        if (DB::selectOne('SELECT to_regclass(?) AS t', [$ad])->t === null) {
+            return null;
+        }
+
+        return DB::affectingStatement("
+            UPDATE addresses a SET locality_pid = ad.locality_pid
+              FROM {$ad} ad
+             WHERE ad.address_detail_pid = a.gnaf_pid AND a.state = ? AND a.locality_pid IS DISTINCT FROM ad.locality_pid
+        ", [$state]);
+    }
+
     /** @return array<string, int> skipped counts */
     private function transform(GnafDiscovery $d, string $state): array
     {
@@ -220,11 +238,11 @@ final class GnafImporter
         $fullAddress = str_replace(':state', $s, $fullAddress);
 
         $inserted = DB::affectingStatement("
-            INSERT INTO addresses (gnaf_pid, state, locality, postcode, street_name, street_type, street_suffix, street_locality_pid,
+            INSERT INTO addresses (gnaf_pid, state, locality, locality_pid, postcode, street_name, street_type, street_suffix, street_locality_pid,
                 number_first, number_last, flat_type, flat_number, level_number, building_name, lot_number,
                 address_kind, is_primary_with_units, is_commercial, address_site_pid, geocode_type, confidence,
                 full_address, search_text, geom)
-            SELECT ad.address_detail_pid, {$s}, l.locality_name, ad.postcode, sl.street_name, sl.street_type_code, sl.street_suffix_code, ad.street_locality_pid,
+            SELECT ad.address_detail_pid, {$s}, l.locality_name, ad.locality_pid, ad.postcode, sl.street_name, sl.street_type_code, sl.street_suffix_code, ad.street_locality_pid,
                 CASE WHEN ad.number_first ~ '^\\d+$' THEN ad.number_first::int END,
                 CASE WHEN ad.number_last ~ '^\\d+$' THEN ad.number_last::int END,
                 ad.flat_type_code, coalesce(ad.flat_number_prefix,'') || coalesce(ad.flat_number,'') || coalesce(ad.flat_number_suffix,''),
@@ -293,6 +311,7 @@ final class GnafImporter
         DB::statement('DROP INDEX IF EXISTS addresses_geom_gist');
         DB::statement('DROP INDEX IF EXISTS addresses_search_trgm');
         DB::statement('DROP INDEX IF EXISTS addresses_state_locality_postcode_index');
+        DB::statement('DROP INDEX IF EXISTS addresses_locality_pid_index');
     }
 
     private function createAddressIndexes(): void
@@ -304,6 +323,7 @@ final class GnafImporter
         DB::statement('CREATE INDEX IF NOT EXISTS addresses_state_locality_postcode_index ON addresses (state, locality, postcode)');
         DB::statement('CREATE INDEX IF NOT EXISTS addresses_search_trgm ON addresses USING GIN (search_text gin_trgm_ops)');
         DB::statement('CREATE INDEX IF NOT EXISTS addresses_street_idx ON addresses (street_locality_pid)');
+        DB::statement('CREATE INDEX IF NOT EXISTS addresses_locality_pid_index ON addresses (locality_pid)');
         DB::statement('ANALYZE addresses');
         $this->log(sprintf('  done in %.1fs', microtime(true) - $t));
     }
