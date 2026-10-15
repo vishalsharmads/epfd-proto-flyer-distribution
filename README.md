@@ -264,4 +264,17 @@ contributors (development tiles only; production needs a commercial tile provide
 | Observability | Laravel logs | Sentry, metrics, uptime, slow-query monitoring |
 
 ## Verification log
-_Filled in at the end of the build — see below._
+Outputs of the commands actually run are in `docs/verification/`.
+
+| # | Definition of Done | Result |
+|---|---|---|
+| 1 | `make up && make seed` | ✅ native stack (no Docker on build machine); seed 16 s; http://epfd.test 200 with EPFD branding (`make-up.txt`) |
+| 2 | `make gnaf` (AUG 2026, NSW+VIC) | ✅ NSW 4,923,145 · VIC 4,187,113 principal addresses; 353,701 unit-building primaries excluded; 7,075 derived suburbs (`make-gnaf.txt`) |
+| 3 | `gnaf:benchmark` | ✅ 9,119,984 rows; ~5,000-letterbox polygons: worst case **76 ms** (< 1 s) with EXPLAIN (`gnaf-benchmark-main.txt`) |
+| 4 | Three draw modes in a real browser | ✅ Playwright `campaign-draw-modes.spec.ts` (pins, trace, suburb → live houses/units/fee) |
+| 5 | Pay print + campaign end-to-end, admin processes | ✅ Playwright `campaign-draw-modes`, `print-order`, `design-order`, `admin`, `design-review` |
+| 6 | `/docs` live, every §9 endpoint with examples | ✅ OpenAPI 3.1, every operation has examples (`api-docs.txt`); Postman `docs/postman/` |
+| 7 | Pest, Playwright, Pint, ESLint | ✅ Pest 117/117, Playwright 33/33 (incl. axe WCAG 2.2 AA), Pint/ESLint/tsc clean (`lint.txt`) |
+| 8 | README | ✅ this file |
+
+Browser QA of every page (desktop/tablet/mobile, light/dark, every role): `tests/e2e/qa/REPORT.md`, `tests/e2e/qa-admin/REPORT.md` — 378 page renders, 0 errors, 0 page-level overflow.
