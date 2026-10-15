@@ -8,13 +8,15 @@ PG_BIN ?= /opt/homebrew/opt/postgresql@17/bin
 PG_DATA ?= /opt/homebrew/var/postgresql@17
 PG_PORT ?= 5433
 STATES ?= NSW,VIC
+BOUNDARIES_PATH ?= $(shell grep -E '^BOUNDARIES_PATH=' .env 2>/dev/null | cut -d= -f2- | tr -d '"')
+GNAF_RELEASE_LABEL ?= $(shell grep -E '^GNAF_RELEASE_LABEL=' .env 2>/dev/null | cut -d= -f2- | tr -d '"')
 ifdef DOCKER
   RUN := docker compose exec -T app
 else
   RUN :=
 endif
 
-.PHONY: up down seed gnaf gnaf-sample-extract bench test test-php test-e2e lint fix build dev mail db-native
+.PHONY: up down seed gnaf boundaries gnaf-sample-extract bench test test-php test-e2e lint fix build dev mail db-native
 
 ## up: start the stack, install deps, build assets, migrate
 up:
@@ -65,6 +67,11 @@ seed:
 ## gnaf: import the full release (default NSW,VIC) from GNAF_PATH. STATES=NSW,VIC,QLD to override.
 gnaf:
 	$(RUN) php artisan gnaf:import --states=$(STATES)
+
+## boundaries: official suburb boundaries from Geoscape Admin Boundaries (BOUNDARIES_PATH = unzipped LOCALITIES_* folder, same release as G-NAF)
+boundaries:
+	@test -n "$(BOUNDARIES_PATH)" || (echo "Set BOUNDARIES_PATH to the unzipped LOCALITIES_*_GDA2020_SHP_* folder (see Admin → G-NAF data status → Import guide)"; exit 1)
+	$(RUN) php artisan suburbs:import $(foreach s,$(shell echo $(STATES) | tr ',' ' ' | tr 'A-Z' 'a-z'),"$(BOUNDARIES_PATH)/$(s)_localities.shp") --source="Geoscape $(GNAF_RELEASE_LABEL)"
 
 ## gnaf-sample-extract: rebuild database/gnaf-sample from the full release
 gnaf-sample-extract:
