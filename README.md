@@ -58,7 +58,8 @@ php artisan gnaf:import --discover-only           # print what the release conta
 php artisan gnaf:import --states=NSW,VIC          # default states; ALL for every state
 php artisan gnaf:import --sample                  # bundled real extract (tests / CI)
 php artisan gnaf:import --fresh                   # ignore resume state, re-stage every file
-php artisan suburbs:import path/to/SAL_2021.geojson   # official ABS SAL boundaries (or .shp via ogr2ogr)
+make boundaries BOUNDARIES_PATH=…/LOCALITIES_*_GDA2020_SHP_*   # official boundaries (Geoscape Localities, streamed); see Admin → G-NAF data status → Import guide
+php artisan suburbs:rekey                         # one-off: key suburbs by locality_pid on databases imported before it existed
 php artisan gnaf:benchmark
 ```
 
@@ -94,7 +95,12 @@ Anti double-count source of truth: `PRIMARY_SECONDARY` table if present → `ADD
 **Suburb boundaries.** G-NAF has no polygons, so each locality's boundary is derived from its own points
 (snap to 15 m grid → `ST_ConcaveHull(0.35)` → 60 m buffer → 25 m simplify, all in the MGA zone) and flagged
 `boundary_source='derived'` (the UI shows "Approximate boundary"). `suburbs:import` replaces them with
-official ABS SAL / Geoscape boundaries (`boundary_source='official'`), matching by name + state and logging unmatched names.
+official boundaries (`boundary_source='official'`). Suburbs are keyed by G-NAF `LOCALITY_PID` — one state can hold
+several localities with the same name (NSW has five "Mayfield"s). Use **Geoscape Administrative Boundaries → Localities**
+(data.gov.au, CC BY 4.0, same quarterly release as G-NAF): its `LOC_PID` is the G-NAF locality pid, so every gazetted
+locality matches exactly. ABS SAL also imports, matched by name + state, but SAL is a mesh-block approximation that drops
+or merges small localities, and names shared by several suburbs are skipped. Non-gazetted G-NAF localities have no
+official polygon anywhere and stay derived.
 
 **CRS.** Storage and queries in **GDA2020 (EPSG:7844)**. Browser lon/lat (WGS84) is treated as GDA2020 — the
 ≈1.8 m datum difference is negligible for letterbox counting. Distances and areas are always computed after
@@ -234,7 +240,7 @@ the included revisions by one) · Editable source files **$49** · Licensed stoc
   also confirm how extra revisions should be invoiced and who the designers are.
 * **Payment provider** — Stripe account/keys (`PAYMENT_GATEWAY=stripe`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`).
 * **Legal copy** — T&Cs, Community Guidelines and Privacy Policy are placeholders (Admin → Content).
-* **Official suburb boundaries** — download ABS SAL 2021 (GDA2020) and run `suburbs:import`.
+* **Official suburb boundaries** — download Geoscape Administrative Boundaries (GDA2020 Shapefile, same release as G-NAF) from data.gov.au and run `suburbs:import` on the `*_localities.shp` files.
 * **Maps** — production tile provider (OSM's public tiles are for development only) and optional `GOOGLE_MAPS_KEY`.
 
 ## Licence and attribution
@@ -253,7 +259,7 @@ contributors (development tiles only; production needs a commercial tile provide
 | Area | Prototype | Production |
 |---|---|---|
 | Letterbox data | G-NAF address points + flat-type heuristics | **Geoscape Buildings + Land Parcels/Land Use** via `GeoscapeBuildingsLetterboxSource` (stub documents the steps: load buildings, link via ADDRESS_LINK, count residential dwellings, `LETTERBOX_SOURCE=geoscape_buildings`) |
-| Suburb polygons | Derived concave hulls ("approximate") | ABS SAL / Geoscape Administrative Boundaries via `suburbs:import` |
+| Suburb polygons | Derived concave hulls ("approximate") | Geoscape Localities (matched on locality pid) via `suburbs:import` |
 | Walking distance | Street-order heuristic | Routing on a road network (pgRouting/OSRM) |
 | Payments | Mock gateway; optional Stripe REST with test PaymentMethods | Stripe Elements/Payment Element in the browser (no PAN on server), 3-D Secure, Apple Pay/Link, webhooks as source of truth |
 | Distributor app | API stubs + GPS simulator | Native distributor app with background GPS, offline sync, anti-spoofing |
