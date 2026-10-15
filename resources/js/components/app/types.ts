@@ -197,3 +197,94 @@ export interface RunT {
     gps_count: number | null;
     track?: LngLat[];
 }
+
+export type DesignType = 'flyer' | 'brochure' | 'business_card' | 'presentation_folder' | 'stationery';
+export type DesignPackage = 'basic' | 'standard' | 'premium';
+
+export interface DesignAssetT {
+    id: number;
+    kind: 'brief_upload' | 'proof' | 'final';
+    version: number;
+    original_name: string;
+    mime: string;
+    size_bytes: number;
+    width: number | null;
+    height: number | null;
+    note: string | null;
+    is_image: boolean;
+    url: string;
+    download_url: string;
+    created_at: string | null;
+}
+
+export interface DesignOrderT {
+    id: number;
+    type: 'design';
+    reference: string;
+    name: string;
+    type_label: string;
+    status: string;
+    step: number;
+    design_type: DesignType;
+    package: DesignPackage;
+    size: string | null;
+    print_product_id: number | null;
+    product: ProductT | null;
+    sides: number;
+    headline: string | null;
+    key_message: string | null;
+    call_to_action: string | null;
+    contact_details: string | null;
+    brand_colours: string | null;
+    style_notes: string | null;
+    target_audience: string | null;
+    due_date: string | null;
+    revisions_included: number;
+    revisions_used: number;
+    revisions_unlimited: boolean;
+    extra_revisions: number;
+    addons: string[];
+    subtotal_cents: number;
+    gst_cents: number;
+    total_cents: number;
+    pricing: (Quote & { meta: { turnaround_days?: number; revisions_included?: number; estimated_first_proof?: string; extra_revision_cents?: number } }) | null;
+    promo_code: string | null;
+    designer: { id: number; name: string } | null;
+    print_order_id: number | null;
+    brief_files: DesignAssetT[];
+    proofs: DesignAssetT[];
+    finals: DesignAssetT[];
+    created_at: string | null;
+    updated_at: string | null;
+    submitted_at: string | null;
+    paid_at: string | null;
+    approved_at: string | null;
+    completed_at: string | null;
+}
+
+export interface DesignTypeOption {
+    value: DesignType;
+    label: string;
+    description: string;
+    sides_option: boolean;
+    prices: Record<DesignPackage, number>;
+    from_cents: number;
+}
+
+export interface DesignPackageOption {
+    value: DesignPackage;
+    label: string;
+    description: string;
+    revisions: number;
+    unlimited: boolean;
+    turnaround_days: number;
+}
+
+export interface DesignCatalogue {
+    types: DesignTypeOption[];
+    packages: DesignPackageOption[];
+    addons: AddonT[];
+    double_sided_pct: number;
+    extra_revision_cents: number;
+    gst_rate: number;
+}

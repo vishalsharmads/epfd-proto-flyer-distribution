@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { date, money, num } from '@/lib/utils';
 import type { SharedProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { CheckCircle2, LifeBuoy, Mail, Plus, Printer, Truck, Wallet } from 'lucide-react';
+import { CheckCircle2, LifeBuoy, Mail, Palette, Plus, Printer, Truck, Wallet } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface Props {
@@ -32,9 +32,14 @@ export default function Dashboard({ stats, outcomes, monthly, threads }: Props) 
             <PageHeader
                 eyebrow={auth.business?.name}
                 title={`G'day, ${auth.user?.name.split(' ')[0] ?? 'there'}`}
-                description="Your distribution and print at a glance."
+                description="Your distribution, print and design at a glance."
                 actions={
                     <>
+                        <Button asChild variant="secondary">
+                            <Link href="/app/design/new" data-testid="dashboard-new-design">
+                                <Palette /> New Design
+                            </Link>
+                        </Button>
                         <Button asChild variant="secondary">
                             <Link href="/app/print/new">
                                 <Printer /> New Print Order

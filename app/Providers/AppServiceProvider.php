@@ -20,6 +20,8 @@ use App\Models\Campaign;
 use App\Models\CampaignArea;
 use App\Models\ContentPage;
 use App\Models\CreditLedger;
+use App\Models\DesignAsset;
+use App\Models\DesignOrder;
 use App\Models\GnafRelease;
 use App\Models\Invoice;
 use App\Models\Message;
@@ -68,6 +70,8 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'campaign' => Campaign::class,
             'print_order' => PrintOrder::class,
+            'design_order' => DesignOrder::class,
+            'design_asset' => DesignAsset::class,
             'payment' => Payment::class,
             'business' => Business::class,
             'run' => Run::class,

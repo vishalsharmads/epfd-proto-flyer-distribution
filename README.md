@@ -13,11 +13,12 @@ Sydney · Melbourne · Wollongong · Newcastle — 0493 243 666 · Operations@ep
 1. [Quick start](#quick-start)
 2. [G-NAF import](#g-naf-import)
 3. [Architecture](#architecture)
-4. [Assumptions](#assumptions)
-5. [Needs human input](#needs-human-input)
-6. [Licence and attribution](#licence-and-attribution)
-7. [Prototype vs production gap list](#prototype-vs-production-gap-list)
-8. [Verification log](#verification-log)
+4. [Design Studio](#design-studio)
+5. [Assumptions](#assumptions)
+6. [Needs human input](#needs-human-input)
+7. [Licence and attribution](#licence-and-attribution)
+8. [Prototype vs production gap list](#prototype-vs-production-gap-list)
+9. [Verification log](#verification-log)
 
 ---
 
@@ -110,7 +111,8 @@ app/
     Gnaf/        GnafDiscovery · GnafImporter (COPY) · AddressClassifier · SuburbBuilder
     Areas/       LetterboxSource (interface) · GnafLetterboxSource · GeoscapeBuildingsLetterboxSource (stub)
                  LetterboxEstimator (validate → cache → count) · PolygonValidator (+20 km rule) · LetterboxEstimate
-    Pricing/     PricingService (pure) · PricingFactory (DB → service) · RateCardDefaults · Quote
+    Pricing/     PricingService (pure: distribution · print · design) · PricingFactory (DB → service) · RateCardDefaults · Quote
+    Design/      DesignService (Design Studio workflow: drafts, briefs, proofs, approval, print hand-off)
     Payments/    PaymentGateway · MockGateway · StripeGateway · CheckoutService (credits, invoices, refunds)
     Campaigns/   CampaignService (drafts, areas, repricing, readiness)
     Runs/        RunService (split areas into runs, publish/assign, GPS)
@@ -140,6 +142,58 @@ routes/web.php · routes/web/{app,admin,auth,docs}.php · routes/api.php + route
 * **Security**: Sanctum (session for web, tokens for API), Spatie Permission RBAC (Super admin, Operations,
   Finance, Support), throttles (api 120/min, estimate 240/min, auth 10/min/IP, payments 10/min), CSRF,
   secure headers, upload validation, audit log, PII redaction in audit payloads.
+
+---
+
+## Design Studio
+
+Graphic design as a third service next to Print and Letterbox Distribution, mirroring epfd.com.au's *Graphic Design*
+offer (Flyer, Brochure, Business Card, Presentation Folder and Stationery design): *"Our creative team delivers
+professional graphic design that enhances your printed materials and supports effective distribution campaigns."*
+
+### Architecture
+
+| Piece | Where |
+|---|---|
+| Data | `design_orders` (reference `DSN-XXXXXX`, type, package, sides, optional target `print_product_id`/size, brief fields, status, `revisions_included/used`, money + `pricing` JSON, promo, `designer_id`, `print_order_id`, soft deletes) and `design_assets` (`brief_upload` · `proof` · `final`, versioned). Migration `2026_10_16_100000_create_design_tables`. Morph map `design_order`, `design_asset`. Messages reuse `support_threads` (`channel = job`, related morph `design_order`). |
+| Pricing | `RateCardDefaults::design()` + `PricingService::design()` (pure; package price per type × double-sided uplift + add-ons − promo + GST). A rate card without a `design` key falls back to the defaults (`PricingService::designCard()`, `PricingFactory::rateCard()`), so databases seeded before Design Studio work unchanged. Admin → Rate card → **Design** tab edits it; the preview calculator supports `service = design`. Promo codes can target `design`. |
+| Workflow | `App\Domain\Design\DesignService` — the one place used by the portal, admin and API. `draft → (pay) submitted → in_design → proof_ready → approved → completed`, with `proof_ready → changes_requested → (new proof) proof_ready` loops, and `cancelled`. Every staff/business action is written to the audit log. Payment goes through `CheckoutService::pay()` (now `Campaign\|PrintOrder\|DesignOrder`), so invoices, credits, refunds and the `OrderPaid` email all work as for other jobs. |
+| Business portal | Nav **Design Studio** → `/app/design` (services "from $X" + my orders), wizard `/app/design/new` → `/{id}/service` → `/{id}/brief` (autosaved; logo/brand/reference uploads PDF/PNG/JPG/SVG ≤ 20 MB, max 10) → `/{id}/confirm` (add-ons, promo, shared `PaymentForm`). Job page `/app/jobs/design/{id}`: timeline, versioned proof gallery with preview, **Approve design** / **Request changes**, messages, final files, and after approval **Print this design** / **Print + distribute** (creates a print-order draft with the matching product and the final file — or the approved proof — copied in as front artwork). The print wizard's artwork step links "Don't have artwork? **Get it designed**" (design order with that product preselected). My Jobs lists design orders (filter *Design*). |
+| Admin | **Design orders** (`design_orders.view` / `design_orders.manage`; Operations: both, Support: view). List with status/type/designer/search filters; detail with brief + uploads, designer assignment, *Mark in design*, versioned proof upload (emails the business via `DesignProofReadyMail` on the branded layout), final-file upload + *Complete*, cancel, messages, payments + refunds (`CheckoutService::refund`), timeline and audit history. Dashboard KPI *Designs awaiting proof* (submitted, in design or changes requested). |
+| API v1 | `GET /design/services`, `POST /pricing/design/quote` (public); `GET/POST /design/orders`, `GET/PATCH/DELETE /design/orders/{id}`, `POST /design/orders/{id}/assets`, `…/pay`, `…/approve`, `…/request-changes`; admin `GET /admin/design-orders`, `GET /admin/design-orders/{id}`, `PATCH …/status`, `POST …/proofs`. Examples in `app/Docs/Examples.php`; Postman regenerated with `php artisan api:postman`. |
+| Tests | `tests/Unit/DesignPricingTest.php`, `tests/Feature/DesignOrderTest.php` (wizard → pay → proofs → changes → approve → print; RBAC; API; rate card), Playwright `design-order.spec.ts` (flows), `design-review.spec.ts` (followups), a11y scans of the hub, service step, admin list and rate-card Design tab. |
+
+**Default design rate card (placeholders, ex GST):**
+
+| Service | Basic | Standard | Premium | Sides option |
+|---|---|---|---|---|
+| Flyer | $99 | $179 | $299 | yes (double-sided +40%) |
+| Brochure | $249 | $399 | $599 | — |
+| Business card | $79 | $129 | $199 | yes (+40%) |
+| Presentation folder | $299 | $449 | $699 | — |
+| Stationery set | $199 | $349 | $549 | — |
+| **Revisions included** | 1 | 3 | unlimited (stored as 99) | |
+| **First proof (business days)** | 5 | 3 | 2 | |
+
+Add-ons: Rush 48 h **+50 %** of the design line (first proof in 2 business days) · Extra revision **$35** (also raises
+the included revisions by one) · Editable source files **$49** · Licensed stock imagery **$25**.
+
+### Assumptions
+
+1. **Prices are placeholders** — realistic AU market rates, not EPFD's; editable in Admin → Rate card → Design.
+2. **Extra revisions are invoiced offline, not charged online.** A change request beyond the package allowance is
+   accepted (the business is warned in the dialog first), counted in `revisions_used`, flagged as an *extra revision*
+   on the job page, the admin detail and in the audit log (`extra_revision_cents`), and must be invoiced by EPFD. This
+   avoids a second checkout in the middle of a design conversation and can't double-charge; automated billing is a
+   production follow-up.
+3. **Double-sided uplift** applies to services with a sides option (flyer, business card); brochures, folders and
+   stationery are multi-panel by nature and priced per design.
+4. **"Print this design"** uses the order's chosen print product, else a default per type (flyer → A5 flyers, brochure →
+   A4 folded brochures, business card/stationery → business cards). Presentation folders have no online print
+   product, so the business is asked to message us. Front artwork = the first print-ready final file (PDF/PNG/JPG),
+   else the latest proof; a second final file becomes the back when the design is double-sided.
+5. **SVG uploads** are accepted for briefs but always served as downloads (never inline) with a locked-down CSP.
+6. **Designers** are any staff user (no separate designer role yet).
 
 ---
 
@@ -176,6 +230,8 @@ routes/web.php · routes/web/{app,admin,auth,docs}.php · routes/api.php + route
   covers displaying counts/derived boundaries to paying customers (see below).
 * **Brand assets** — confirm the extracted colours, provide an SVG logo and a square favicon (current favicon is the PNG logo, padded).
 * **Real rate card** — replace the RealRun-calibrated defaults (Admin → Rate card).
+* **Design Studio prices, revisions and turnaround** — the Design tab values are placeholders (see [Design Studio](#design-studio));
+  also confirm how extra revisions should be invoiced and who the designers are.
 * **Payment provider** — Stripe account/keys (`PAYMENT_GATEWAY=stripe`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`).
 * **Legal copy** — T&Cs, Community Guidelines and Privacy Policy are placeholders (Admin → Content).
 * **Official suburb boundaries** — download ABS SAL 2021 (GDA2020) and run `suburbs:import`.

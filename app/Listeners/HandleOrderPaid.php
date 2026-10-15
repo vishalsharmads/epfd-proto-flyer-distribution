@@ -7,6 +7,7 @@ namespace App\Listeners;
 use App\Domain\Campaigns\CampaignService;
 use App\Domain\Payments\Events\OrderPaid;
 use App\Mail\InvoiceMail;
+use App\Models\DesignOrder;
 use App\Models\PrintOrder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -38,8 +39,11 @@ class HandleOrderPaid
             $invoice = $payable->invoice()->latest('id')->first();
             $user = $payable->user ?? $payable->business->users()->first();
             if ($invoice && $user) {
-                $url = $payable instanceof PrintOrder ? route('app.jobs.print', $payable) : route('app.jobs.campaign', $payable);
-                $jobName = $payable instanceof PrintOrder ? 'print order '.$payable->reference : $payable->name;
+                [$url, $jobName] = match (true) {
+                    $payable instanceof PrintOrder => [route('app.jobs.print', $payable), 'print order '.$payable->reference],
+                    $payable instanceof DesignOrder => [route('app.jobs.design', $payable), 'design order '.$payable->reference],
+                    default => [route('app.jobs.campaign', $payable), $payable->name],
+                };
                 Mail::to($user->email)->send(new InvoiceMail($invoice, $user->name, $jobName, $url));
             }
         } catch (Throwable $e) {

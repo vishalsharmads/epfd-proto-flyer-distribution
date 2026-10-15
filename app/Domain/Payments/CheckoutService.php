@@ -9,6 +9,7 @@ use App\Exceptions\DomainProblem;
 use App\Models\Business;
 use App\Models\Campaign;
 use App\Models\CreditLedger;
+use App\Models\DesignOrder;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PrintOrder;
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Pays for a Campaign or PrintOrder: credits first, then the card via the PaymentGateway, then
+ * Pays for a Campaign, PrintOrder or DesignOrder: credits first, then the card via the PaymentGateway, then
  * issues a GST invoice, moves the job to "submitted" and records everything in the ledger/audit log.
  */
 final class CheckoutService
@@ -33,7 +34,7 @@ final class CheckoutService
      * @param  array{card?: array<string, mixed>|null, saved_card_id?: int|null, save_card?: bool, use_credits?: bool,
      *               billing: array{company:string, abn?:string|null, address:string}, idempotency_key?: string|null}  $input
      */
-    public function pay(Campaign|PrintOrder $payable, User $user, array $input): Payment
+    public function pay(Campaign|PrintOrder|DesignOrder $payable, User $user, array $input): Payment
     {
         /** @var Business $business */
         $business = $payable->business;

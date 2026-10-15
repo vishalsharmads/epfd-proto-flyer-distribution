@@ -53,6 +53,40 @@ final class RateCardDefaults
                     'hard_proof' => ['label' => 'Printed hard-copy proof', 'fixed' => 15.00],
                 ],
             ],
+            'design' => self::design(),
+        ];
+    }
+
+    /**
+     * Design Studio (graphic design) — PLACEHOLDER prices, ex GST, AUD; needs EPFD sign-off.
+     * Price = package price for the design type (× (1 + double_sided_pct) when a two-sided design of a
+     * type that offers sides) + add-ons − promo + GST. `revisions` 99 = unlimited.
+     *
+     * @return array<string, mixed>
+     */
+    public static function design(): array
+    {
+        return [
+            'double_sided_pct' => 40,
+            'types' => [
+                'flyer' => ['label' => 'Flyer design', 'sides_option' => true, 'prices' => ['basic' => 99, 'standard' => 179, 'premium' => 299]],
+                'brochure' => ['label' => 'Brochure design', 'sides_option' => false, 'prices' => ['basic' => 249, 'standard' => 399, 'premium' => 599]],
+                'business_card' => ['label' => 'Business card design', 'sides_option' => true, 'prices' => ['basic' => 79, 'standard' => 129, 'premium' => 199]],
+                'presentation_folder' => ['label' => 'Presentation folder design', 'sides_option' => false, 'prices' => ['basic' => 299, 'standard' => 449, 'premium' => 699]],
+                'stationery' => ['label' => 'Stationery set design', 'sides_option' => false, 'prices' => ['basic' => 199, 'standard' => 349, 'premium' => 549]],
+            ],
+            'packages' => [
+                'basic' => ['label' => 'Basic', 'revisions' => 1, 'turnaround_days' => 5, 'description' => 'One concept from your brief, 1 revision.'],
+                'standard' => ['label' => 'Standard', 'revisions' => 3, 'turnaround_days' => 3, 'description' => 'Two concepts, 3 revisions, faster turnaround.'],
+                'premium' => ['label' => 'Premium', 'revisions' => 99, 'turnaround_days' => 2, 'description' => 'Senior designer, three concepts, unlimited revisions.'],
+            ],
+            'addons' => [
+                'rush' => ['label' => 'Rush 48-hour turnaround', 'pct' => 50],
+                'extra_revision' => ['label' => 'Extra revision', 'fixed' => 35.00],
+                'source_files' => ['label' => 'Editable source files (AI/INDD/PSD)', 'fixed' => 49.00],
+                'stock_imagery' => ['label' => 'Licensed stock imagery', 'fixed' => 25.00],
+            ],
+            'rush_turnaround_days' => 2,
         ];
     }
 }

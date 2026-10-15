@@ -7,6 +7,7 @@ DOCKER := $(shell command -v docker 2>/dev/null)
 PG_BIN ?= /opt/homebrew/opt/postgresql@17/bin
 PG_DATA ?= /opt/homebrew/var/postgresql@17
 PG_PORT ?= 5433
+STATES ?= NSW,VIC
 ifdef DOCKER
   RUN := docker compose exec -T app
 else
@@ -63,7 +64,7 @@ seed:
 
 ## gnaf: import the full release (default NSW,VIC) from GNAF_PATH. STATES=NSW,VIC,QLD to override.
 gnaf:
-	$(RUN) php artisan gnaf:import --states=$(or $(STATES),NSW,VIC)
+	$(RUN) php artisan gnaf:import --states=$(STATES)
 
 ## gnaf-sample-extract: rebuild database/gnaf-sample from the full release
 gnaf-sample-extract:

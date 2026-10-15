@@ -5,11 +5,11 @@ import AdminLayout from '@/layouts/admin-layout';
 import { dateTime, money, num, titleCase } from '@/lib/utils';
 import type { GeoJsonPolygon, LngLat } from '@/types';
 import { Deferred, Link } from '@inertiajs/react';
-import { Activity, Building2, DollarSign, Inbox, Printer, Truck } from 'lucide-react';
+import { Activity, Building2, DollarSign, Inbox, Palette, Printer, Truck } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface Props {
-    kpis: { pending_approvals: number; runs_in_flight: number; revenue_month_cents: number; open_support: number; active_jobs: number; artwork_waiting: number };
+    kpis: { pending_approvals: number; runs_in_flight: number; revenue_month_cents: number; open_support: number; active_jobs: number; artwork_waiting: number; design_awaiting_proof: number };
     jobs: { status: string; campaigns: number; print: number }[];
     revenue: { month: string; cents: number }[];
     activity: { id: number; action: string; user: string | null; subject: string | null; created_at: string }[];
@@ -23,14 +23,17 @@ export default function Dashboard({ kpis, jobs, revenue, activity, live }: Props
     const jobsData = jobs.filter((j) => j.campaigns + j.print > 0 || ['submitted', 'in_delivery', 'completed'].includes(j.status)).map((j) => ({ ...j, label: titleCase(j.status) }));
     return (
         <AdminLayout title="Dashboard">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-7">
                 <Link href="/admin/businesses?status=pending" className="rounded-[16px] focus-visible:outline-2 focus-visible:outline-focus">
                     <StatTile label="Pending approvals" value={num(kpis.pending_approvals)} icon={Building2} hint="Businesses to review" />
                 </Link>
-                <StatTile label="Active jobs" value={num(kpis.active_jobs)} icon={Activity} hint="Campaigns + print" />
+                <StatTile label="Active jobs" value={num(kpis.active_jobs)} icon={Activity} hint="Campaigns, print + design" />
                 <StatTile label="Runs in flight" value={num(kpis.runs_in_flight)} icon={Truck} hint="Allocated → in delivery" />
                 <Link href="/admin/print-orders?status=awaiting_artwork_approval" className="rounded-[16px] focus-visible:outline-2 focus-visible:outline-focus">
                     <StatTile label="Artwork to review" value={num(kpis.artwork_waiting)} icon={Printer} />
+                </Link>
+                <Link href="/admin/design-orders?status=awaiting_proof" className="rounded-[16px] focus-visible:outline-2 focus-visible:outline-focus" data-testid="kpi-design-awaiting-proof">
+                    <StatTile label="Designs awaiting proof" value={num(kpis.design_awaiting_proof)} icon={Palette} hint="Submitted, in design or changes" />
                 </Link>
                 <StatTile label="Revenue this month" value={money(kpis.revenue_month_cents)} icon={DollarSign} hint="Incl. GST, net of refunds" />
                 <Link href="/admin/support?status=open" className="rounded-[16px] focus-visible:outline-2 focus-visible:outline-focus">

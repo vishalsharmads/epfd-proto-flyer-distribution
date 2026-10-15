@@ -9,7 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import { api, cn, date, money, num } from '@/lib/utils';
 import type { Quote } from '@/types';
 import { router } from '@inertiajs/react';
-import { Truck } from 'lucide-react';
+import { Palette, Truck } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 type Res = { data: PrintOrderT };
@@ -124,6 +124,17 @@ export default function PrintSpecs({ order: initial, addons }: { order: PrintOrd
                             <h2 className="text-sm font-medium">Artwork</h2>
                             <ArtworkSlot orderId={o.id} side="front" product={p} orientation={o.orientation} artwork={front} onChange={(a) => setArt('front', a)} />
                             {o.sides === 2 && <ArtworkSlot orderId={o.id} side="back" product={p} orientation={o.orientation} artwork={back} onChange={(a) => setArt('back', a)} />}
+                            {!front && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-[12px] border border-border bg-surface-2 px-4 py-3 text-sm">
+                                    <Palette className="size-4 shrink-0 text-muted" aria-hidden />
+                                    <span className="flex-1">
+                                        <span className="font-medium">Don't have artwork?</span> <span className="text-muted">Our Design Studio can create it for {p.name}.</span>
+                                    </span>
+                                    <Button size="sm" variant="secondary" data-testid="get-it-designed" onClick={() => router.post('/app/design', { print_product_id: p.id })}>
+                                        Get it designed
+                                    </Button>
+                                </div>
+                            )}
                             <p className="text-xs text-muted">Colours on screen can differ from print (screens are RGB, print is CMYK). Keep text inside the safe zone and extend backgrounds to the bleed edge.</p>
                         </section>
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\BusinessController;
 use App\Http\Controllers\Api\V1\CampaignController;
+use App\Http\Controllers\Api\V1\DesignController;
 use App\Http\Controllers\Api\V1\Distributor\RunController as DistributorRunController;
 use App\Http\Controllers\Api\V1\PrintController;
 use App\Http\Controllers\Api\V1\SupportController;
@@ -14,7 +15,7 @@ use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Owned by the API workstream: auth, profile, campaigns, print, payments, support, admin, distributor, webhooks.
+| Owned by the API workstream: auth, profile, campaigns, print, design, payments, support, admin, distributor, webhooks.
 | Included from routes/api.php inside the `throttle:api` group (prefix /api/v1).
 | Docs: /docs (Swagger UI, offline) and /docs/openapi.json.
 */
@@ -37,6 +38,8 @@ Route::prefix('auth')->name('api.auth.')->group(function () {
 // --- Public catalogue -------------------------------------------------------------------------
 Route::get('print/products', [PrintController::class, 'products'])->name('api.print.products');
 Route::get('print/products/{product}/options', [PrintController::class, 'options'])->whereNumber('product')->name('api.print.options');
+Route::get('design/services', [DesignController::class, 'services'])->name('api.design.services');
+Route::post('pricing/design/quote', [DesignController::class, 'quote'])->name('api.pricing.design');
 
 // --- Payment webhooks (no auth; signature verified) -------------------------------------------
 Route::post('webhooks/{gateway}', [WebhookController::class, 'handle'])->whereIn('gateway', ['mock', 'stripe'])
@@ -73,6 +76,16 @@ Route::middleware('auth:sanctum')->name('api.')->group(function () {
     Route::post('print/orders/{order}/artwork', [PrintController::class, 'uploadArtwork'])->whereNumber('order')->name('print.orders.artwork.store');
     Route::delete('print/orders/{order}/artwork/{artwork}', [PrintController::class, 'destroyArtwork'])->whereNumber(['order', 'artwork'])->name('print.orders.artwork.destroy');
     Route::post('print/orders/{order}/pay', [PrintController::class, 'pay'])->whereNumber('order')->middleware('throttle:payments')->name('print.orders.pay');
+
+    Route::get('design/orders', [DesignController::class, 'index'])->name('design.orders.index');
+    Route::post('design/orders', [DesignController::class, 'store'])->name('design.orders.store');
+    Route::get('design/orders/{order}', [DesignController::class, 'show'])->whereNumber('order')->name('design.orders.show');
+    Route::patch('design/orders/{order}', [DesignController::class, 'update'])->whereNumber('order')->name('design.orders.update');
+    Route::delete('design/orders/{order}', [DesignController::class, 'destroy'])->whereNumber('order')->name('design.orders.destroy');
+    Route::post('design/orders/{order}/assets', [DesignController::class, 'uploadAssets'])->whereNumber('order')->name('design.orders.assets.store');
+    Route::post('design/orders/{order}/pay', [DesignController::class, 'pay'])->whereNumber('order')->middleware('throttle:payments')->name('design.orders.pay');
+    Route::post('design/orders/{order}/approve', [DesignController::class, 'approve'])->whereNumber('order')->name('design.orders.approve');
+    Route::post('design/orders/{order}/request-changes', [DesignController::class, 'requestChanges'])->whereNumber('order')->name('design.orders.request-changes');
 
     Route::get('payments', [BillingController::class, 'payments'])->name('payments.index');
     Route::get('invoices', [BillingController::class, 'invoices'])->name('invoices.index');
@@ -123,6 +136,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'staff'])->name('api.admin.'
         Route::post('artworks/{artwork}/reject', [Admin\PrintOrderController::class, 'rejectArtwork'])->whereNumber('artwork')->name('artworks.reject');
     });
     Route::post('print-orders/{order}/refund', [Admin\PrintOrderController::class, 'refund'])->whereNumber('order')->middleware('permission:payments.refund')->name('print-orders.refund');
+
+    Route::middleware('permission:design_orders.view')->group(function () {
+        Route::get('design-orders', [Admin\DesignOrderController::class, 'index'])->name('design-orders.index');
+        Route::get('design-orders/{order}', [Admin\DesignOrderController::class, 'show'])->whereNumber('order')->name('design-orders.show');
+    });
+    Route::middleware('permission:design_orders.manage')->group(function () {
+        Route::patch('design-orders/{order}/status', [Admin\DesignOrderController::class, 'updateStatus'])->whereNumber('order')->name('design-orders.status');
+        Route::post('design-orders/{order}/proofs', [Admin\DesignOrderController::class, 'uploadProof'])->whereNumber('order')->name('design-orders.proofs');
+    });
 
     Route::get('payments', [Admin\PaymentController::class, 'index'])->middleware('permission:payments.view')->name('payments.index');
     Route::post('payments/{payment}/refund', [Admin\PaymentController::class, 'refund'])->whereNumber('payment')->middleware('permission:payments.refund')->name('payments.refund');

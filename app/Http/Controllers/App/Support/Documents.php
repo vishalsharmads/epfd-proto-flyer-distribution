@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\App\Support;
 
 use App\Models\Campaign;
+use App\Models\DesignOrder;
 use App\Models\Invoice;
 use App\Models\PrintOrder;
 use App\Models\Run;
@@ -25,7 +26,12 @@ final class Documents
             'invoice' => $invoice,
             'business' => $invoice->business,
             'job' => $job,
-            'jobLabel' => $job instanceof Campaign ? 'Letterbox distribution — '.$job->name : ($job instanceof PrintOrder ? 'Print order' : 'Order'),
+            'jobLabel' => match (true) {
+                $job instanceof Campaign => 'Letterbox distribution — '.$job->name,
+                $job instanceof PrintOrder => 'Print order',
+                $job instanceof DesignOrder => 'Graphic design — '.$job->displayName(),
+                default => 'Order',
+            },
             ...self::common(),
         ])->setPaper('a4');
     }

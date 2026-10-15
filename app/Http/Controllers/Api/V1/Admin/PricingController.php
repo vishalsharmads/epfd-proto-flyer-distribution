@@ -104,7 +104,7 @@ class PricingController extends Controller
             'description' => [...$s, 'nullable', 'string', 'max:255'],
             'type' => [...$s, 'required', 'in:percent,fixed'],
             'value' => [...$s, 'required', 'integer', 'min:1', 'max:10000000'],
-            'service' => [...$s, 'in:any,distribution,print'],
+            'service' => [...$s, 'in:any,distribution,print,design'],
             'min_subtotal_cents' => [...$s, 'integer', 'min:0'],
             'starts_at' => [...$s, 'nullable', 'date'],
             'ends_at' => [...$s, 'nullable', 'date', 'after:starts_at'],

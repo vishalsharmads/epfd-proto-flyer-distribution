@@ -7,8 +7,11 @@ namespace App\Http\Controllers\App\Support;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Exceptions\DomainProblem;
+use App\Models\Artwork;
 use App\Models\PrintOrder;
+use App\Models\PrintProduct;
 use App\Support\BusinessDays;
+use Illuminate\Support\Facades\Storage;
 
 /** Re-prices a print order draft with the shared PricingService (same maths as /api/v1/pricing/print/quote). */
 final class PrintPricer
@@ -53,6 +56,30 @@ final class PrintPricer
         ])->save();
 
         return $order;
+    }
+
+    /** Switch a draft to a product with sensible defaults (mid paper weight, 1,000 pcs), dropping old artwork, and re-price. */
+    public static function applyProduct(PrintOrder $order, PrintProduct $p): void
+    {
+        $gsm = (int) ($p->gsm_options[min(1, count($p->gsm_options) - 1)] ?? $p->gsm_options[0]);
+        $qtys = array_map('intval', $p->quantity_options);
+        $order->forceFill([
+            'print_product_id' => $p->id,
+            'gsm' => $gsm,
+            'finish' => ((array) ($p->finish_options[(string) $gsm] ?? ['matt']))[0],
+            'sides' => 1,
+            'orientation' => $p->width_mm > $p->height_mm ? 'landscape' : 'portrait',
+            'quantity' => in_array(1000, $qtys, true) ? 1000 : $qtys[intdiv(count($qtys), 2)],
+            'also_distribute' => false,
+        ])->save();
+        $order->artworks()->get()->each(fn (Artwork $a) => self::removeArtwork($a));
+        self::reprice($order->fresh(), []);
+    }
+
+    public static function removeArtwork(Artwork $a): void
+    {
+        Storage::disk('local')->delete($a->path);
+        $a->delete();
     }
 
     /** @return list<string> */

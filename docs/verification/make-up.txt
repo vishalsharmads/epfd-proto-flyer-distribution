@@ -1,0 +1,175 @@
+NOTICE:  extension "postgis" already exists, skipping
+NOTICE:  extension "pg_trgm" already exists, skipping
+NOTICE:  extension "postgis" already exists, skipping
+NOTICE:  extension "pg_trgm" already exists, skipping
+PostgreSQL + PostGIS ready on :5433
+Mailpit → http://127.0.0.1:8025
+composer install --no-interaction
+Installing dependencies from lock file (including require-dev)
+Verifying lock file contents can be installed on current platform.
+Nothing to install, update or remove
+Generating optimized autoload files
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover --ansi
+
+ INFO Discovering packages. 
+
+ barryvdh/laravel-dompdf .. DONE
+ dedoc/scramble .. DONE
+ inertiajs/inertia-laravel .. DONE
+ laravel/boost .. DONE
+ laravel/mcp .. DONE
+ laravel/pail .. DONE
+ laravel/pao .. DONE
+ laravel/roster .. DONE
+ laravel/sanctum .. DONE
+ laravel/tinker .. DONE
+ nesbot/carbon .. DONE
+ nunomaduro/collision .. DONE
+ nunomaduro/termwind .. DONE
+ pestphp/pest-plugin-laravel .. DONE
+ spatie/laravel-permission .. DONE
+ tightenco/ziggy .. DONE
+
+94 packages you are using are looking for funding.
+Use the `composer fund` command to find out more!
+npm ci --legacy-peer-deps
+npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 510 packages, and audited 511 packages in 8s
+
+175 packages are looking for funding
+  run `npm fund` for details
+
+1 critical severity vulnerability
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npx vite build
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 3721 modules transformed.
+rendering chunks...
+computing gzip size...
+public/build/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2       10.25 kB
+public/build/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2        11.23 kB
+public/build/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2         18.74 kB
+public/build/assets/inter-greek-wght-normal-CkhJZR-_.woff2            18.99 kB
+public/build/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2     25.96 kB
+public/build/manifest.json                                            39.94 kB │ gzip:   3.90 kB
+public/build/assets/inter-latin-wght-normal-Dx4kXJAl.woff2            48.25 kB
+public/build/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2        85.06 kB
+public/build/assets/maplibre-B2k4QVOw.css                             69.80 kB │ gzip:  10.10 kB
+public/build/assets/app-A_rZXb_C.css                                 160.85 kB │ gzip:  28.81 kB
+public/build/assets/minus-DGMdwO6l.js                                  0.15 kB │ gzip:   0.15 kB
+public/build/assets/check-Cm-2Nn6T.js                                  0.16 kB │ gzip:   0.16 kB
+public/build/assets/plus-Diqr5q_0.js                                   0.19 kB │ gzip:   0.17 kB
+public/build/assets/search-q5y8-Km4.js                                 0.21 kB │ gzip:   0.18 kB
+public/build/assets/lock-D6bEkMzI.js                                   0.24 kB │ gzip:   0.21 kB
+public/build/assets/circle-check-D9Y7hDbs.js                           0.24 kB │ gzip:   0.20 kB
+public/build/assets/mail-CpcD9Y8R.js                                   0.25 kB │ gzip:   0.22 kB
+public/build/assets/badges-BOPZDBFh.js                                 0.26 kB │ gzip:   0.20 kB
+public/build/assets/upload-D0zsYYkn.js                                 0.26 kB │ gzip:   0.21 kB
+public/build/assets/download-BHV0rdTm.js                               0.26 kB │ gzip:   0.21 kB
+public/build/assets/map-pin-Clq4a2R-.js                                0.29 kB │ gzip:   0.24 kB
+public/build/assets/rotate-ccw-clock-CUcHpCxL.js                       0.30 kB │ gzip:   0.24 kB
+public/build/assets/repeat-DPTJKvIv.js                                 0.30 kB │ gzip:   0.22 kB
+public/build/assets/house-MdjS6wD6.js                                  0.33 kB │ gzip:   0.25 kB
+public/build/assets/user-plus-DWugWU4U.js                              0.34 kB │ gzip:   0.25 kB
+public/build/assets/printer-COmwRCK9.js                                0.35 kB │ gzip:   0.25 kB
+public/build/assets/shield-check-CAeXtCgu.js                           0.35 kB │ gzip:   0.27 kB
+public/build/assets/tag-DSHDfCBs.js                                    0.36 kB │ gzip:   0.26 kB
+public/build/assets/trash-CAsFxiZj.js                                  0.38 kB │ gzip:   0.24 kB
+public/build/assets/file-text-DSmdaqev.js                              0.42 kB │ gzip:   0.27 kB
+public/build/assets/truck-CzEjzQCx.js                                  0.44 kB │ gzip:   0.28 kB
+public/build/assets/building-complex-ZNL81b_n.js                       0.44 kB │ gzip:   0.27 kB
+public/build/assets/map-C5VtKqqx.js                                    0.46 kB │ gzip:   0.29 kB
+public/build/assets/mouse-pointer-click-DqYTLBdw.js                    0.58 kB │ gzip:   0.36 kB
+public/build/assets/rolldown-runtime-XKyaHtl9.js                       0.72 kB │ gzip:   0.42 kB
+public/build/assets/show-D-XVISOZ.js                                   0.85 kB │ gzip:   0.48 kB
+public/build/assets/tokens-CgKoX-9-.js                                 0.86 kB │ gzip:   0.42 kB
+public/build/assets/receipt-Ceowu1zW.js                                1.08 kB │ gzip:   0.49 kB
+public/build/assets/forgot-password-CKXxAxtF.js                        1.18 kB │ gzip:   0.66 kB
+public/build/assets/reset-password-Cacoi9wN.js                         1.47 kB │ gzip:   0.64 kB
+public/build/assets/show-DRdr-Ros.js                                   1.66 kB │ gzip:   0.77 kB
+public/build/assets/map-preview-CdZRtcA5.js                            1.77 kB │ gzip:   0.94 kB
+public/build/assets/refund-dialog-DVDCxaHK.js                          2.10 kB │ gzip:   1.03 kB
+public/build/assets/auth-layout-Da4WpvcV.js                            2.13 kB │ gzip:   0.93 kB
+public/build/assets/draft-card-CpYPcumR.js                             2.29 kB │ gzip:   1.12 kB
+public/build/assets/print-bits-Bfp3FK-z.js                             2.38 kB │ gzip:   1.18 kB
+public/build/assets/businesses-C94EVp_X.js                             2.38 kB │ gzip:   1.01 kB
+public/build/assets/confirm-CaRqXpYG.js                                2.38 kB │ gzip:   1.12 kB
+public/build/assets/reports-BwsmgKFU.js                                2.41 kB │ gzip:   1.22 kB
+public/build/assets/print-orders-BePLvXVR.js                           2.46 kB │ gzip:   1.09 kB
+public/build/assets/address-typeahead-D5726spc.js                      2.51 kB │ gzip:   1.30 kB
+public/build/assets/campaigns-CKJvS0fy.js                              2.53 kB │ gzip:   1.05 kB
+public/build/assets/audience-Cji5VehY.js                               2.54 kB │ gzip:   1.26 kB
+public/build/assets/support-D5FmoVNR.js                                2.66 kB │ gzip:   1.11 kB
+public/build/assets/audit-log-VgLEbpm3.js                              2.79 kB │ gzip:   1.21 kB
+public/build/assets/service-areas-BBXAeqdV.js                          2.82 kB │ gzip:   1.15 kB
+public/build/assets/print--6iogaLd.js                                  3.00 kB │ gzip:   1.32 kB
+public/build/assets/product-yvj9cfyh.js                                3.01 kB │ gzip:   1.44 kB
+public/build/assets/google-FnEXoIs9.js                                 3.02 kB │ gzip:   1.41 kB
+public/build/assets/navigation-B0w10Bl4.js                             3.04 kB │ gzip:   1.23 kB
+public/build/assets/support-DAEqGE0z.js                                3.09 kB │ gzip:   1.33 kB
+public/build/assets/verify-otp-B6KEBmpj.js                             3.26 kB │ gzip:   1.58 kB
+public/build/assets/show-CIsJowSc.js                                   3.29 kB │ gzip:   1.49 kB
+public/build/assets/start-BBWUzyFy.js                                  3.40 kB │ gzip:   1.34 kB
+public/build/assets/login-BO2dHGkb.js                                  3.43 kB │ gzip:   1.39 kB
+public/build/assets/map-CssDOSgE.js                                    3.62 kB │ gzip:   1.62 kB
+public/build/assets/maplibre-CsLsoHTj.js                               3.67 kB │ gzip:   1.48 kB
+public/build/assets/jobs-BZZ-vopI.js                                   3.84 kB │ gzip:   1.61 kB
+public/build/assets/welcome-CQTTb2Nq.js                                3.91 kB │ gzip:   1.68 kB
+public/build/assets/map-4_5DY27Y.js                                    3.94 kB │ gzip:   1.94 kB
+public/build/assets/start-BX94GTcp.js                                  3.95 kB │ gzip:   1.52 kB
+public/build/assets/distribution-CdezTlAk.js                           4.82 kB │ gzip:   1.87 kB
+public/build/assets/print-D_ILYce0.js                                  4.90 kB │ gzip:   2.06 kB
+public/build/assets/misc-DIKG8jIs.js                                   4.96 kB │ gzip:   2.24 kB
+public/build/assets/pickup-points-B69DfdOO.js                          5.11 kB │ gzip:   2.03 kB
+public/build/assets/show-CydC6jYS.js                                   5.47 kB │ gzip:   1.95 kB
+public/build/assets/confirm-FDEUCRCQ.js                                5.65 kB │ gzip:   2.23 kB
+public/build/assets/wizard-BlGvr5eT.js                                 5.67 kB │ gzip:   2.31 kB
+public/build/assets/payments-CbWbDR0H.js                               5.79 kB │ gzip:   1.87 kB
+public/build/assets/content-B4KpmRqy.js                                6.59 kB │ gzip:   2.64 kB
+public/build/assets/users-UgvMhQgx.js                                  6.65 kB │ gzip:   2.50 kB
+public/build/assets/register-BHZt_Pax.js                               6.66 kB │ gzip:   2.37 kB
+public/build/assets/campaign-DTiU33kv.js                               6.73 kB │ gzip:   2.43 kB
+public/build/assets/app-layout-CecO3Iox.js                             6.88 kB │ gzip:   2.63 kB
+public/build/assets/surface-BqF4epwt.js                                7.11 kB │ gzip:   2.39 kB
+public/build/assets/gnaf-DIL7caP3.js                                   7.56 kB │ gzip:   2.36 kB
+public/build/assets/dist-C4b7AWjY.js                                   8.55 kB │ gzip:   3.43 kB
+public/build/assets/brand-dspUXxg1.js                                  8.72 kB │ gzip:   3.67 kB
+public/build/assets/details-C19cJ-SR.js                                9.43 kB │ gzip:   3.47 kB
+public/build/assets/payment-form-jUZFq5E6.js                           9.76 kB │ gzip:   3.55 kB
+public/build/assets/show-lwZxFwo5.js                                  10.37 kB │ gzip:   3.38 kB
+public/build/assets/account-DgGyAS6p.js                               10.79 kB │ gzip:   3.34 kB
+public/build/assets/form-CzPSj10O.js                                  11.29 kB │ gzip:   3.56 kB
+public/build/assets/show-zbAEdHiv.js                                  12.73 kB │ gzip:   4.01 kB
+public/build/assets/specs-FUvxNwid.js                                 14.57 kB │ gzip:   5.24 kB
+public/build/assets/show-hTKQH5hH.js                                  17.80 kB │ gzip:   5.66 kB
+public/build/assets/dashboard-C7q6eQ-A.js                             21.09 kB │ gzip:   7.23 kB
+public/build/assets/dashboard-DNO0Czcc.js                             24.95 kB │ gzip:   8.15 kB
+public/build/assets/rate-card-Dviiy_uM.js                             27.87 kB │ gzip:   7.96 kB
+public/build/assets/admin-layout-CYUa0Pu1.js                          31.28 kB │ gzip:  10.74 kB
+public/build/assets/AudienceBuilder-1frJAi5o.js                       56.69 kB │ gzip:  17.90 kB
+public/build/assets/loader-circle-wYnUDO1y.js                         60.43 kB │ gzip:  19.08 kB
+public/build/assets/overlay-CmL_Okhn.js                               94.58 kB │ gzip:  30.83 kB
+public/build/assets/BarChart-BQJ6sJu4.js                             357.79 kB │ gzip: 103.49 kB
+public/build/assets/app-YD7i9Nyf.js                                  391.17 kB │ gzip: 125.42 kB
+public/build/assets/maplibre-BI7f0qRv.js                           1,027.70 kB │ gzip: 272.99 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.02s
+php artisan migrate --force
+
+ INFO Nothing to migrate. 
+
+herd link epfd >/dev/null 2>&1 && echo "→ http://epfd.test"
+→ http://epfd.test
+make up  8.09s user 10.14s system 122% cpu 14.851 total

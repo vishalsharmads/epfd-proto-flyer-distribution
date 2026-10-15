@@ -67,7 +67,7 @@ export interface QuoteLine {
 }
 
 export interface Quote {
-    service: 'distribution' | 'print';
+    service: 'distribution' | 'print' | 'design';
     currency: 'AUD';
     lines: QuoteLine[];
     discount_cents: number;

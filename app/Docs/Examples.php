@@ -37,6 +37,18 @@ final class Examples
             'POST /print/orders' => ['print_product_id' => 1, 'gsm' => 150, 'finish' => 'gloss', 'sides' => 2, 'orientation' => 'portrait', 'quantity' => 5000, 'addons' => [], 'also_distribute' => true],
             'PATCH /print/orders/{order}' => ['quantity' => 10000, 'right_to_print' => true],
             'POST /print/orders/{order}/pay' => $pay,
+            'POST /pricing/design/quote' => ['design_type' => 'flyer', 'package' => 'standard', 'sides' => 2, 'addons' => ['rush', 'source_files'], 'promo_code' => null],
+            'POST /design/orders' => ['design_type' => 'flyer', 'package' => 'standard', 'sides' => 1, 'print_product_id' => 2, 'addons' => ['stock_imagery'],
+                'headline' => 'Fresh coffee, five minutes from home', 'key_message' => 'Grand opening Saturday 25 October — free coffee for the first 100 customers.',
+                'call_to_action' => 'Visit us at 257 Victoria Road, Rydalmere', 'contact_details' => '0412 345 678 · hello@harbourcoffee.test',
+                'brand_colours' => 'Navy #1B2A4A, cream #F5EFE6', 'style_notes' => 'Warm, friendly, lots of white space. Use our logo top-left.',
+                'target_audience' => 'Families and commuters in Rydalmere and Ermington', 'due_date' => '2026-10-24'],
+            'PATCH /design/orders/{order}' => ['package' => 'premium', 'addons' => ['rush'], 'promo_code' => 'WELCOME10'],
+            'POST /design/orders/{order}/pay' => $pay,
+            'POST /design/orders/{order}/request-changes' => ['changes' => 'Please make the logo bigger and change the headline colour to navy.'],
+            'POST /design/orders/{order}/assets' => ['files' => ['(binary) logo.svg', '(binary) shopfront.jpg']],
+            'PATCH /admin/design-orders/{order}/status' => ['status' => 'in_design', 'note' => 'Assigned to Dana — first concepts Thursday.'],
+            'POST /admin/design-orders/{order}/proofs' => ['file' => '(binary) proof-v1.pdf', 'note' => 'Two layout options on pages 1–2.'],
             'POST /support/threads' => ['subject' => 'Can you deliver before Friday?', 'body' => 'Hi team, is a Friday delivery possible for CMP-3CVBS8?', 'campaign_id' => 4],
             'POST /support/threads/{thread}/messages' => ['body' => 'Thanks — that works for us.'],
             'POST /runs/{run}/gps' => ['points' => [
@@ -101,6 +113,20 @@ final class Examples
             'POST /admin/runs/{run}/publish' => [200 => ['data' => self::run('published')]],
             'POST /admin/runs/{run}/assign' => [200 => ['data' => self::run('allocated')]],
             'PATCH /admin/runs/{run}/status' => [200 => ['data' => self::run('collected')]],
+            'GET /design/services' => [200 => ['data' => self::designServices()]],
+            'POST /pricing/design/quote' => [200 => ['data' => self::designQuote()]],
+            'GET /design/orders' => [200 => ['data' => [self::designOrder('proof_ready', false)], 'links' => ['first' => '/api/v1/design/orders?page=1', 'last' => '/api/v1/design/orders?page=1', 'prev' => null, 'next' => null], 'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 1]]],
+            'POST /design/orders' => [201 => ['data' => self::designOrder('draft', true)]],
+            'GET /design/orders/{order}' => [200 => ['data' => self::designOrder('proof_ready', true)]],
+            'PATCH /design/orders/{order}' => [200 => ['data' => self::designOrder('draft', true)]],
+            'POST /design/orders/{order}/assets' => [201 => ['data' => [self::designAsset('brief_upload', 1, 'logo.svg', 'image/svg+xml')]]],
+            'POST /design/orders/{order}/pay' => [201 => ['data' => ['payment' => [...self::payment(), 'payable_type' => 'design_order', 'payable_id' => 7, 'amount_cents' => 25960], 'design_order' => self::designOrder('submitted', false), 'invoice_id' => 9]]],
+            'POST /design/orders/{order}/approve' => [200 => ['data' => self::designOrder('approved', true)]],
+            'POST /design/orders/{order}/request-changes' => [200 => ['data' => ['design_order' => [...self::designOrder('changes_requested', false), 'revisions_used' => 1], 'extra_revision' => false, 'extra_revision_cents' => 0]]],
+            'GET /admin/design-orders' => [200 => ['data' => [self::designOrder('in_design', false)], 'links' => ['first' => '/api/v1/admin/design-orders?page=1', 'last' => '/api/v1/admin/design-orders?page=1', 'prev' => null, 'next' => null], 'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 1]]],
+            'GET /admin/design-orders/{order}' => [200 => ['data' => self::designOrder('in_design', true)]],
+            'PATCH /admin/design-orders/{order}/status' => [200 => ['data' => self::designOrder('in_design', true)]],
+            'POST /admin/design-orders/{order}/proofs' => [201 => ['data' => ['asset' => self::designAsset('proof', 1, 'proof-v1.pdf', 'application/pdf'), 'design_order' => self::designOrder('proof_ready', false)]]],
             'POST /admin/payments/{payment}/refund' => [200 => ['data' => [...self::payment(), 'refunded_cents' => 10000, 'status' => 'partially_refunded']]],
         ];
     }
@@ -138,6 +164,74 @@ final class Examples
         }
 
         return $c;
+    }
+
+    /** @return array<string, mixed> */
+    private static function designServices(): array
+    {
+        $types = [['flyer', 'Flyer design', true, [9900, 17900, 29900]], ['brochure', 'Brochure design', false, [24900, 39900, 59900]], ['business_card', 'Business card design', true, [7900, 12900, 19900]], ['presentation_folder', 'Presentation folder design', false, [29900, 44900, 69900]], ['stationery', 'Stationery set design', false, [19900, 34900, 54900]]];
+
+        return [
+            'types' => array_map(fn ($t) => ['value' => $t[0], 'label' => $t[1], 'description' => '…', 'sides_option' => $t[2], 'prices' => ['basic' => $t[3][0], 'standard' => $t[3][1], 'premium' => $t[3][2]], 'from_cents' => $t[3][0]], $types),
+            'packages' => [
+                ['value' => 'basic', 'label' => 'Basic', 'description' => 'One concept from your brief, 1 revision.', 'revisions' => 1, 'unlimited' => false, 'turnaround_days' => 5],
+                ['value' => 'standard', 'label' => 'Standard', 'description' => 'Two concepts, 3 revisions, faster turnaround.', 'revisions' => 3, 'unlimited' => false, 'turnaround_days' => 3],
+                ['value' => 'premium', 'label' => 'Premium', 'description' => 'Senior designer, three concepts, unlimited revisions.', 'revisions' => 99, 'unlimited' => true, 'turnaround_days' => 2],
+            ],
+            'addons' => [
+                ['value' => 'rush', 'label' => 'Rush 48-hour turnaround', 'pct' => 50.0, 'fixed_cents' => null],
+                ['value' => 'extra_revision', 'label' => 'Extra revision', 'pct' => null, 'fixed_cents' => 3500],
+                ['value' => 'source_files', 'label' => 'Editable source files (AI/INDD/PSD)', 'pct' => null, 'fixed_cents' => 4900],
+                ['value' => 'stock_imagery', 'label' => 'Licensed stock imagery', 'pct' => null, 'fixed_cents' => 2500],
+            ],
+            'double_sided_pct' => 40.0, 'extra_revision_cents' => 3500, 'gst_rate' => 0.1,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function designQuote(): array
+    {
+        return [
+            'service' => 'design', 'currency' => 'AUD',
+            'lines' => [
+                ['code' => 'design', 'label' => 'Flyer design — Standard package, double-sided', 'quantity' => 1, 'unit_cents' => 25060, 'amount_cents' => 25060],
+                ['code' => 'addon_rush', 'label' => 'Rush 48-hour turnaround', 'quantity' => 1, 'unit_cents' => 12530, 'amount_cents' => 12530],
+                ['code' => 'addon_source_files', 'label' => 'Editable source files (AI/INDD/PSD)', 'quantity' => 1, 'unit_cents' => 4900, 'amount_cents' => 4900],
+            ],
+            'discount_cents' => 0, 'subtotal_cents' => 42490, 'gst_cents' => 4249, 'total_cents' => 46739, 'per_item_incl_gst_cents' => 46739, 'gst_inclusive' => true,
+            'meta' => ['design_type' => 'flyer', 'package' => 'standard', 'sides' => 2, 'addons' => ['rush', 'source_files'], 'revisions_included' => 3, 'revisions_unlimited' => false, 'turnaround_days' => 2, 'extra_revision_cents' => 3500, 'estimated_first_proof' => '2026-10-20'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function designOrder(string $status, bool $withAssets): array
+    {
+        $paid = $status !== 'draft';
+        $d = [
+            'id' => 7, 'reference' => 'DSN-7QK4ZP', 'status' => $status, 'design_type' => 'flyer', 'package' => 'standard', 'size' => '148 × 210 mm', 'print_product_id' => 2, 'sides' => 1,
+            'brief' => ['headline' => 'Fresh coffee, five minutes from home', 'key_message' => 'Grand opening Saturday 25 October — free coffee for the first 100 customers.', 'call_to_action' => 'Visit us at 257 Victoria Road, Rydalmere', 'contact_details' => '0412 345 678 · hello@harbourcoffee.test', 'brand_colours' => 'Navy #1B2A4A, cream #F5EFE6', 'style_notes' => 'Warm, friendly, lots of white space.', 'target_audience' => 'Families and commuters', 'due_date' => '2026-10-24'],
+            'addons' => ['stock_imagery'], 'revisions_included' => 3, 'revisions_used' => 0, 'extra_revisions' => 0,
+            'subtotal_cents' => 20400, 'gst_cents' => 2040, 'total_cents' => 22440,
+            'pricing' => ['service' => 'design', 'lines' => [['code' => 'design', 'label' => 'Flyer design — Standard package, single-sided', 'quantity' => 1, 'unit_cents' => 17900, 'amount_cents' => 17900], ['code' => 'addon_stock_imagery', 'label' => 'Licensed stock imagery', 'quantity' => 1, 'unit_cents' => 2500, 'amount_cents' => 2500]], 'subtotal_cents' => 20400, 'gst_cents' => 2040, 'total_cents' => 22440],
+            'promo_code' => null, 'designer_id' => $paid ? 3 : null, 'print_order_id' => null,
+            'submitted_at' => $paid ? '2026-10-15T07:47:42+00:00' : null, 'paid_at' => $paid ? '2026-10-15T07:47:42+00:00' : null,
+            'approved_at' => in_array($status, ['approved', 'completed'], true) ? '2026-10-18T02:10:00+00:00' : null, 'completed_at' => null,
+            'created_at' => '2026-10-15T07:40:00+00:00',
+        ];
+        if ($withAssets) {
+            $d['assets'] = [self::designAsset('brief_upload', 1, 'logo.svg', 'image/svg+xml')];
+            if (in_array($status, ['proof_ready', 'approved', 'completed', 'changes_requested'], true)) {
+                $d['assets'][] = self::designAsset('proof', 1, 'proof-v1.png', 'image/png');
+            }
+        }
+
+        return $d;
+    }
+
+    /** @return array<string, mixed> */
+    private static function designAsset(string $kind, int $version, string $name, string $mime): array
+    {
+        return ['id' => 21, 'kind' => $kind, 'version' => $version, 'original_name' => $name, 'mime' => $mime, 'size_bytes' => 184220, 'width' => str_starts_with($mime, 'image/png') ? 1240 : null, 'height' => str_starts_with($mime, 'image/png') ? 1748 : null, 'note' => null, 'created_at' => '2026-10-17T03:00:00+00:00'];
     }
 
     /** @return array<string, mixed> */

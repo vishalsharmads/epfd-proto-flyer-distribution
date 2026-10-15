@@ -6,6 +6,7 @@ use App\Http\Controllers\App\AccountController;
 use App\Http\Controllers\App\CampaignController;
 use App\Http\Controllers\App\CampaignWizardController;
 use App\Http\Controllers\App\DashboardController;
+use App\Http\Controllers\App\DesignOrderController;
 use App\Http\Controllers\App\DocumentController;
 use App\Http\Controllers\App\JobController;
 use App\Http\Controllers\App\PrintOrderController;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 | Business portal (/app). Owned by the business-portal workstream.
-| Every model-bound route is authorised against the user's business via CampaignPolicy / PrintOrderPolicy.
+| Every model-bound route is authorised against the user's business via CampaignPolicy / PrintOrderPolicy / DesignOrderPolicy.
 */
 Route::middleware(['auth', 'business'])->prefix('app')->name('app.')->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
@@ -44,11 +45,27 @@ Route::middleware(['auth', 'business'])->prefix('app')->name('app.')->group(func
     Route::post('print/{printOrder}/pay', [PrintOrderController::class, 'pay'])->middleware('throttle:payments')->name('print.pay');
     Route::get('print/{printOrder}/{step}', [PrintOrderController::class, 'step'])->whereIn('step', ['product', 'specs', 'confirm'])->name('print.step');
 
+    // Design Studio hub + design wizard (Start → Service → Brief → Confirm) and design job actions
+    Route::get('design', [DesignOrderController::class, 'hub'])->name('design');
+    Route::get('design/new', [DesignOrderController::class, 'start'])->name('design.start');
+    Route::post('design', [DesignOrderController::class, 'store'])->name('design.store');
+    Route::delete('design/{designOrder}', [DesignOrderController::class, 'destroy'])->name('design.destroy');
+    Route::patch('design/{designOrder}', [DesignOrderController::class, 'update'])->name('design.update');
+    Route::post('design/{designOrder}/assets', [DesignOrderController::class, 'upload'])->name('design.assets.store');
+    Route::delete('design/{designOrder}/assets/{asset}', [DesignOrderController::class, 'deleteAsset'])->name('design.assets.destroy');
+    Route::get('design/{designOrder}/assets/{asset}', [DesignOrderController::class, 'asset'])->name('design.assets.show');
+    Route::post('design/{designOrder}/pay', [DesignOrderController::class, 'pay'])->middleware('throttle:payments')->name('design.pay');
+    Route::post('design/{designOrder}/approve', [DesignOrderController::class, 'approve'])->name('design.approve');
+    Route::post('design/{designOrder}/request-changes', [DesignOrderController::class, 'requestChanges'])->name('design.request-changes');
+    Route::post('design/{designOrder}/print', [DesignOrderController::class, 'print'])->name('design.print');
+    Route::get('design/{designOrder}/{step}', [DesignOrderController::class, 'step'])->whereIn('step', ['service', 'brief', 'confirm'])->name('design.step');
+
     // My jobs
     Route::get('jobs', [JobController::class, 'index'])->name('jobs');
     Route::get('jobs/campaigns/{campaign}', [JobController::class, 'campaign'])->name('jobs.campaign');
     Route::get('jobs/print/{printOrder}', [JobController::class, 'print'])->name('jobs.print');
-    Route::post('jobs/{type}/{id}/messages', [JobController::class, 'message'])->whereIn('type', ['campaign', 'print'])->whereNumber('id')->name('jobs.messages');
+    Route::get('jobs/design/{designOrder}', [JobController::class, 'design'])->name('jobs.design');
+    Route::post('jobs/{type}/{id}/messages', [JobController::class, 'message'])->whereIn('type', ['campaign', 'print', 'design'])->whereNumber('id')->name('jobs.messages');
     Route::post('jobs/{type}/{id}/rating', [JobController::class, 'rate'])->whereIn('type', ['campaign', 'print'])->whereNumber('id')->name('jobs.rating');
     Route::post('jobs/campaigns/{campaign}/areas/{area}/save', [JobController::class, 'saveArea'])->name('jobs.save-area');
 

@@ -27,6 +27,13 @@ interface CardData {
         finishes: Record<string, { label: string; pct: Money }>;
         addons: Record<string, { label: string; pct?: Money | null; fixed?: Money | null }>;
     };
+    design: {
+        double_sided_pct: Money;
+        rush_turnaround_days: Money;
+        types: Record<string, { label: string; sides_option: boolean; prices: Record<string, Money> }>;
+        packages: Record<string, { label: string; description?: string; revisions: Money; turnaround_days: Money }>;
+        addons: Record<string, { label: string; pct?: Money | null; fixed?: Money | null }>;
+    };
 }
 interface Product {
     id: number;
@@ -106,7 +113,7 @@ export default function RateCardPage(props: Props) {
         <AdminLayout
             title="Rate card & promos"
             actions={
-                ['distribution', 'print'].includes(tab) && (
+                ['distribution', 'print', 'design'].includes(tab) && (
                     <>
                         {dirty && (
                             <Button variant="ghost" onClick={() => (setDraft(props.card.data), setErrors({}))}>
@@ -126,12 +133,13 @@ export default function RateCardPage(props: Props) {
                 tabs={[
                     { value: 'distribution', label: 'Distribution' },
                     { value: 'print', label: 'Print' },
+                    { value: 'design', label: 'Design' },
                     { value: 'matrix', label: 'Print price matrix' },
                     { value: 'promos', label: 'Promo codes', count: props.promos.length },
                     { value: 'history', label: 'History', count: props.history.length },
                 ]}
             />
-            {dirty && ['distribution', 'print'].includes(tab) && (
+            {dirty && ['distribution', 'print', 'design'].includes(tab) && (
                 <Alert tone="warning" className="mb-6" title="Unsaved changes">
                     The preview uses your draft. Saving creates a new rate card version and activates it immediately for new quotes.
                 </Alert>
@@ -142,10 +150,10 @@ export default function RateCardPage(props: Props) {
                 </Alert>
             )}
 
-            {['distribution', 'print'].includes(tab) && (
+            {['distribution', 'print', 'design'].includes(tab) && (
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-                    <div className="min-w-0 space-y-6">{tab === 'distribution' ? <DistributionEditor d={draft} set={set} err={err} /> : <PrintEditor d={draft} set={set} err={err} />}</div>
-                    <PreviewCalculator draft={draft} products={props.products} />
+                    <div className="min-w-0 space-y-6">{tab === 'distribution' ? <DistributionEditor d={draft} set={set} err={err} /> : tab === 'print' ? <PrintEditor d={draft} set={set} err={err} /> : <DesignEditor d={draft} set={set} err={err} />}</div>
+                    <PreviewCalculator key={tab === 'design' ? 'design' : 'other'} draft={draft} products={props.products} initialService={tab === 'design' ? 'design' : tab === 'print' ? 'print' : 'distribution'} />
                 </div>
             )}
             {tab === 'matrix' && <MatrixEditor products={props.products} matrix={props.matrix} />}
@@ -357,10 +365,139 @@ function PrintEditor({ d, set, err }: EditorProps) {
     );
 }
 
+function DesignEditor({ d, set, err }: EditorProps) {
+    const g = d.design;
+    const pkgs = Object.keys(g.packages);
+    const [newAddon, setNewAddon] = useState('');
+    return (
+        <>
+            <Alert tone="warning" title="Placeholder prices">
+                Design Studio prices are prototype placeholders (ex GST) — confirm EPFD's real design rates before launch.
+            </Alert>
+            <Card>
+                <CardHeader title="Design prices by service" description="Ex GST, AUD per design. Double-sided uplift applies to services with a sides option." />
+                <CardBody className="space-y-4">
+                    <div className="hidden gap-3 text-xs font-medium text-muted sm:grid sm:grid-cols-[1.4fr_repeat(3,1fr)_auto]">
+                        <span>Service</span>
+                        {pkgs.map((p) => (
+                            <span key={p}>{g.packages[p].label}</span>
+                        ))}
+                        <span>Sides option</span>
+                    </div>
+                    {Object.entries(g.types).map(([k, t]) => (
+                        <div key={k} className="grid items-start gap-3 sm:grid-cols-[1.4fr_repeat(3,1fr)_auto]">
+                            <Input aria-label={`${k} label`} value={t.label} onChange={(e) => set(['design', 'types', k, 'label'], e.target.value)} />
+                            {pkgs.map((p) => (
+                                <NumInput key={p} label={`${t.label} ${g.packages[p].label} price`} prefix="$" step="1" value={t.prices[p] ?? ''} onChange={(v) => set(['design', 'types', k, 'prices', p], v)} error={err(`design.types.${k}.prices.${p}`)} />
+                            ))}
+                            <label className="flex h-11 items-center gap-2 text-sm">
+                                <Switch checked={!!t.sides_option} onCheckedChange={(v) => set(['design', 'types', k, 'sides_option'], v)} aria-label={`${t.label} offers single/double-sided`} />
+                                <span className="sm:sr-only">Sides option</span>
+                            </label>
+                        </div>
+                    ))}
+                </CardBody>
+            </Card>
+            <Card>
+                <CardHeader title="Packages" description="Revisions included (99 = unlimited) and business days to first proof" />
+                <CardBody className="space-y-4">
+                    {pkgs.map((p) => {
+                        const pk = g.packages[p];
+                        return (
+                            <div key={p} className="grid items-start gap-3 sm:grid-cols-[1fr_120px_140px]">
+                                <Field label="Label">
+                                    <Input value={pk.label} onChange={(e) => set(['design', 'packages', p, 'label'], e.target.value)} />
+                                </Field>
+                                <Field label="Revisions">
+                                    <NumInput label={`${pk.label} revisions`} step="1" value={pk.revisions} onChange={(v) => set(['design', 'packages', p, 'revisions'], v)} error={err(`design.packages.${p}.revisions`)} />
+                                </Field>
+                                <Field label="Turnaround">
+                                    <NumInput label={`${pk.label} turnaround days`} step="1" suffix="days" value={pk.turnaround_days} onChange={(v) => set(['design', 'packages', p, 'turnaround_days'], v)} error={err(`design.packages.${p}.turnaround_days`)} />
+                                </Field>
+                                <Field label="Description" className="sm:col-span-3">
+                                    <Input value={pk.description ?? ''} onChange={(e) => set(['design', 'packages', p, 'description'], e.target.value)} />
+                                </Field>
+                            </div>
+                        );
+                    })}
+                </CardBody>
+            </Card>
+            <Card>
+                <CardHeader title="Settings" />
+                <CardBody className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Double-sided uplift" hint="Added to the package price">
+                        <NumInput label="Double-sided uplift" step="1" suffix="%" value={g.double_sided_pct} onChange={(v) => set(['design', 'double_sided_pct'], v)} error={err('design.double_sided_pct')} />
+                    </Field>
+                    <Field label="Rush turnaround" hint="Business days to first proof with the rush add-on">
+                        <NumInput label="Rush turnaround days" step="1" suffix="days" value={g.rush_turnaround_days} onChange={(v) => set(['design', 'rush_turnaround_days'], v)} error={err('design.rush_turnaround_days')} />
+                    </Field>
+                </CardBody>
+            </Card>
+            <Card>
+                <CardHeader title="Design add-ons" description="Either a % of the design line or a fixed amount (ex GST). “extra_revision” is also the price of revisions beyond a package." />
+                <CardBody className="space-y-4">
+                    {Object.entries(g.addons).map(([k, a]) => {
+                        const isPct = a.pct !== undefined && a.pct !== null;
+                        return (
+                            <div key={k} className="grid items-end gap-3 sm:grid-cols-[1.4fr_120px_1fr_auto]">
+                                <Field label="Label">
+                                    <Input value={a.label} onChange={(e) => set(['design', 'addons', k, 'label'], e.target.value)} />
+                                </Field>
+                                <Field label="Type">
+                                    <Select value={isPct ? 'pct' : 'fixed'} onChange={(e) => set(['design', 'addons', k], e.target.value === 'pct' ? { label: a.label, pct: 0 } : { label: a.label, fixed: 0 })}>
+                                        <option value="pct">Percent</option>
+                                        <option value="fixed">Fixed</option>
+                                    </Select>
+                                </Field>
+                                <Field label="Value">
+                                    {isPct ? (
+                                        <NumInput label={`${a.label} percent`} step="0.5" suffix="%" value={a.pct ?? ''} onChange={(v) => set(['design', 'addons', k, 'pct'], v)} error={err(`design.addons.${k}.pct`)} />
+                                    ) : (
+                                        <NumInput label={`${a.label} amount`} prefix="$" step="0.01" value={a.fixed ?? ''} onChange={(v) => set(['design', 'addons', k, 'fixed'], v)} error={err(`design.addons.${k}.fixed`)} />
+                                    )}
+                                </Field>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label={`Remove ${a.label}`}
+                                    disabled={k === 'extra_revision'}
+                                    onClick={() => {
+                                        const next = { ...g.addons };
+                                        delete next[k];
+                                        set(['design', 'addons'], next);
+                                    }}
+                                >
+                                    <Trash2 />
+                                </Button>
+                            </div>
+                        );
+                    })}
+                    <form
+                        className="flex gap-2 border-t border-border pt-4"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            const key = newAddon.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                            if (!key || g.addons[key]) return;
+                            set(['design', 'addons', key], { label: newAddon.trim(), fixed: 0 });
+                            setNewAddon('');
+                        }}
+                    >
+                        <Input aria-label="New design add-on name" placeholder="New add-on name, e.g. Logo refresh" value={newAddon} onChange={(e) => setNewAddon(e.target.value)} />
+                        <Button type="submit" variant="secondary" disabled={!newAddon.trim()}>
+                            <Plus /> Add
+                        </Button>
+                    </form>
+                </CardBody>
+            </Card>
+        </>
+    );
+}
+
 /* ---------------------------------------------------------------- preview */
 
-function PreviewCalculator({ draft, products }: { draft: CardData; products: Product[] }) {
-    const [svc, setSvc] = useState<'distribution' | 'print'>('distribution');
+function PreviewCalculator({ draft, products, initialService = 'distribution' }: { draft: CardData; products: Product[]; initialService?: 'distribution' | 'print' | 'design' }) {
+    const [svc, setSvc] = useState<'distribution' | 'print' | 'design'>(initialService);
+    const [dz, setDz] = useState({ design_type: 'flyer', package: 'standard', sides: 1, addons: [] as string[] });
     const [dist, setDist] = useState({ coverage: 'houses_units', material: 'standard_dl', houses: '4000', units: '1200' });
     const firstProduct = products.find((p) => p.is_active) ?? products[0];
     const [pr, setPr] = useState({ product_id: firstProduct?.id ?? 0, gsm: firstProduct?.gsm_options[0] ?? 0, sides: 1, quantity: firstProduct?.quantity_options[0] ?? 0, finish: 'matt', addons: [] as string[] });
@@ -369,7 +506,12 @@ function PreviewCalculator({ draft, products }: { draft: CardData; products: Pro
     const [nonce, setNonce] = useState(0);
     const product = products.find((p) => p.id === pr.product_id);
 
-    const input = svc === 'distribution' ? { service: svc, ...dist, houses: Number(dist.houses || 0), units: Number(dist.units || 0), promo: promo || null } : { service: svc, ...pr, promo: promo || null };
+    const input =
+        svc === 'distribution'
+            ? { service: svc, ...dist, houses: Number(dist.houses || 0), units: Number(dist.units || 0), promo: promo || null }
+            : svc === 'design'
+              ? { service: svc, ...dz, promo: promo || null }
+              : { service: svc, ...pr, promo: promo || null };
     const key = JSON.stringify([draft, input, nonce]);
     useEffect(() => {
         const ctl = { cancelled: false };
@@ -394,14 +536,46 @@ function PreviewCalculator({ draft, products }: { draft: CardData; products: Pro
         <Card className="h-fit xl:sticky xl:top-24">
             <CardHeader title="Price preview" description="Same pricing engine as checkout, using your unsaved draft" action={<Calculator className="size-4 text-muted" aria-hidden />} />
             <CardBody className="space-y-4">
-                <div role="radiogroup" aria-label="Service" className="grid grid-cols-2 gap-1 rounded-[12px] bg-surface-2 p-1">
-                    {(['distribution', 'print'] as const).map((s) => (
+                <div role="radiogroup" aria-label="Service" className="grid grid-cols-3 gap-1 rounded-[12px] bg-surface-2 p-1">
+                    {(['distribution', 'print', 'design'] as const).map((s) => (
                         <button key={s} role="radio" aria-checked={svc === s} type="button" onClick={() => setSvc(s)} className={`rounded-[9px] py-1.5 text-sm font-medium ${svc === s ? 'bg-surface shadow-xs' : 'text-muted'}`}>
                             {titleCase(s)}
                         </button>
                     ))}
                 </div>
-                {svc === 'distribution' ? (
+                {svc === 'design' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label="Service" className="col-span-2">
+                            <Select data-testid="preview-design-type" value={dz.design_type} onChange={(e) => setDz({ ...dz, design_type: e.target.value })}>
+                                {Object.entries(draft.design?.types ?? {}).map(([k, t]) => (
+                                    <option key={k} value={k}>{t.label}</option>
+                                ))}
+                            </Select>
+                        </Field>
+                        <Field label="Package">
+                            <Select value={dz.package} onChange={(e) => setDz({ ...dz, package: e.target.value })}>
+                                {Object.entries(draft.design?.packages ?? {}).map(([k, p]) => (
+                                    <option key={k} value={k}>{p.label}</option>
+                                ))}
+                            </Select>
+                        </Field>
+                        <Field label="Sides">
+                            <Select value={dz.sides} onChange={(e) => setDz({ ...dz, sides: Number(e.target.value) })}>
+                                <option value={1}>Single</option>
+                                <option value={2}>Double</option>
+                            </Select>
+                        </Field>
+                        <fieldset className="col-span-2 space-y-2">
+                            <legend className="mb-1 text-sm font-medium">Add-ons</legend>
+                            {Object.entries(draft.design?.addons ?? {}).map(([k, a]) => (
+                                <label key={k} className="flex items-center gap-2 text-sm">
+                                    <Checkbox checked={dz.addons.includes(k)} onCheckedChange={(c) => setDz({ ...dz, addons: c ? [...dz.addons, k] : dz.addons.filter((x) => x !== k) })} />
+                                    {a.label}
+                                </label>
+                            ))}
+                        </fieldset>
+                    </div>
+                ) : svc === 'distribution' ? (
                     <div className="grid grid-cols-2 gap-3">
                         <Field label="Coverage" className="col-span-2">
                             <Select value={dist.coverage} onChange={(e) => setDist({ ...dist, coverage: e.target.value })}>

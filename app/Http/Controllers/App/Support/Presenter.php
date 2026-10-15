@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\App\Support;
 
 use App\Domain\Campaigns\CampaignService;
+use App\Domain\Design\DesignService;
 use App\Domain\Pricing\PricingFactory;
+use App\Domain\Pricing\PricingService;
 use App\Models\Artwork;
 use App\Models\Business;
 use App\Models\Campaign;
 use App\Models\CampaignArea;
+use App\Models\DesignAsset;
+use App\Models\DesignOrder;
 use App\Models\Invoice;
 use App\Models\PrintOrder;
 use App\Models\PrintProduct;
@@ -169,6 +173,121 @@ final class Presenter
     public static function product(PrintProduct $p): array
     {
         return $p->only('id', 'slug', 'name', 'category', 'size_label', 'width_mm', 'height_mm', 'bleed_mm', 'from_price_cents', 'gsm_options', 'finish_options', 'quantity_options', 'distributable', 'distribution_material', 'turnaround_days');
+    }
+
+    /** @return array<string, mixed> */
+    public static function designOrder(DesignOrder $o, bool $staff = false): array
+    {
+        $o->loadMissing('product', 'assets', 'designer:id,name');
+        $files = $o->assets->map(fn (DesignAsset $a) => self::designAsset($o, $a, $staff))->values();
+
+        return [
+            'id' => $o->id,
+            'type' => 'design',
+            'reference' => $o->reference,
+            'name' => $o->displayName(),
+            'type_label' => $o->typeLabel(),
+            'status' => $o->status,
+            'step' => $o->step,
+            'design_type' => $o->design_type,
+            'package' => $o->package,
+            'size' => $o->size,
+            'print_product_id' => $o->print_product_id,
+            'product' => $o->product ? self::product($o->product) : null,
+            'sides' => (int) $o->sides,
+            'headline' => $o->headline,
+            'key_message' => $o->key_message,
+            'call_to_action' => $o->call_to_action,
+            'contact_details' => $o->contact_details,
+            'brand_colours' => $o->brand_colours,
+            'style_notes' => $o->style_notes,
+            'target_audience' => $o->target_audience,
+            'due_date' => $o->due_date?->toDateString(),
+            'revisions_included' => $o->revisions_included,
+            'revisions_used' => $o->revisions_used,
+            'revisions_unlimited' => $o->revisions_included >= DesignOrder::UNLIMITED_REVISIONS,
+            'extra_revisions' => $o->extraRevisions(),
+            'addons' => DesignService::addons($o),
+            'subtotal_cents' => $o->subtotal_cents,
+            'gst_cents' => $o->gst_cents,
+            'total_cents' => $o->total_cents,
+            'pricing' => $o->pricing,
+            'promo_code' => $o->promo_code,
+            'designer' => $o->designer ? ['id' => $o->designer->id, 'name' => $o->designer->name] : null,
+            'print_order_id' => $o->print_order_id,
+            'brief_files' => $files->where('kind', 'brief_upload')->values()->all(),
+            'proofs' => $files->where('kind', 'proof')->sortByDesc('version')->values()->all(),
+            'finals' => $files->where('kind', 'final')->values()->all(),
+            'created_at' => $o->created_at?->toIso8601String(),
+            'updated_at' => $o->updated_at?->toIso8601String(),
+            'submitted_at' => $o->submitted_at?->toIso8601String(),
+            'paid_at' => $o->paid_at?->toIso8601String(),
+            'approved_at' => $o->approved_at?->toIso8601String(),
+            'completed_at' => $o->completed_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public static function designAsset(DesignOrder $o, DesignAsset $a, bool $staff = false): array
+    {
+        $url = $staff ? route('admin.design-orders.asset', [$o, $a]) : route('app.design.assets.show', [$o, $a]);
+
+        return [
+            'id' => $a->id,
+            'kind' => $a->kind,
+            'version' => $a->version,
+            'original_name' => $a->original_name,
+            'mime' => $a->mime,
+            'size_bytes' => $a->size_bytes,
+            'width' => $a->width,
+            'height' => $a->height,
+            'note' => $a->note,
+            'is_image' => $a->isImage(),
+            'url' => $url,
+            'download_url' => $url.'?download=1',
+            'created_at' => $a->created_at?->toIso8601String(),
+        ];
+    }
+
+    /** Design services, packages and add-ons from the active rate card (money in cents ex GST). */
+    public static function designCatalogue(): array
+    {
+        $card = app(PricingService::class)->designCard();
+        $blurb = [
+            'flyer' => 'Eye-catching flyers built for letterbox drops — headline, offer and call to action that get noticed.',
+            'brochure' => 'Folded brochures that tell your story across panels, ready for print and distribution.',
+            'business_card' => 'Professional business cards that match your brand and print perfectly.',
+            'presentation_folder' => 'Branded presentation folders with pocket and business-card slot artwork.',
+            'stationery' => 'A matching set: letterhead, compliments slip, envelope and business card.',
+        ];
+
+        return [
+            'types' => collect($card['types'])->map(fn ($t, $k) => [
+                'value' => (string) $k,
+                'label' => (string) $t['label'],
+                'description' => $blurb[$k] ?? '',
+                'sides_option' => (bool) ($t['sides_option'] ?? false),
+                'prices' => collect($t['prices'])->map(fn ($v) => (int) round((float) $v * 100))->all(),
+                'from_cents' => (int) round(min(array_map('floatval', $t['prices'])) * 100),
+            ])->values()->all(),
+            'packages' => collect($card['packages'])->map(fn ($p, $k) => [
+                'value' => (string) $k,
+                'label' => (string) $p['label'],
+                'description' => (string) ($p['description'] ?? ''),
+                'revisions' => (int) $p['revisions'],
+                'unlimited' => (int) $p['revisions'] >= DesignOrder::UNLIMITED_REVISIONS,
+                'turnaround_days' => (int) $p['turnaround_days'],
+            ])->values()->all(),
+            'addons' => collect($card['addons'])->map(fn ($a, $k) => [
+                'value' => (string) $k,
+                'label' => (string) $a['label'],
+                'pct' => isset($a['pct']) ? (float) $a['pct'] : null,
+                'fixed_cents' => isset($a['fixed']) ? (int) round((float) $a['fixed'] * 100) : null,
+            ])->values()->all(),
+            'double_sided_pct' => (float) ($card['double_sided_pct'] ?? 0),
+            'extra_revision_cents' => (int) round((float) ($card['addons']['extra_revision']['fixed'] ?? 0) * 100),
+            'gst_rate' => (float) (PricingFactory::rateCard()['gst_rate'] ?? 0.10),
+        ];
     }
 
     /** Material + coverage option lists from the active rate card (prices incl. GST per item, in cents). */

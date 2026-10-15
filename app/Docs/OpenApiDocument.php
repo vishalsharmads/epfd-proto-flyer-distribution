@@ -26,6 +26,7 @@ final class OpenApiDocument
         'GET /suburbs', 'GET /suburbs/{suburb}/boundary', 'GET /addresses/search', 'GET /addresses/viewport',
         'POST /areas/estimate', 'POST /pricing/distribution/quote', 'POST /pricing/print/quote',
         'GET /print/products', 'GET /print/products/{product}/options', 'POST /webhooks/{gateway}',
+        'GET /design/services', 'POST /pricing/design/quote',
     ];
 
     /** Tag by path prefix (first match wins) + tag descriptions. */
@@ -35,9 +36,10 @@ final class OpenApiDocument
         ['/suburbs', 'Geo & estimates', 'Suburb search/boundaries, G-NAF address search, viewport points and server-side letterbox estimates. Coordinates are GeoJSON [lng, lat].'],
         ['/addresses', 'Geo & estimates', ''],
         ['/areas', 'Geo & estimates', ''],
-        ['/pricing', 'Pricing', 'Distribution and print quotes from the active rate card (ex GST + GST lines).'],
+        ['/pricing', 'Pricing', 'Distribution, print and design quotes from the active rate card (ex GST + GST lines).'],
         ['/campaigns', 'Campaigns', 'Distribution campaigns: drafts, areas, readiness, payment and live tracking.'],
         ['/print', 'Print', 'Print catalogue, options/price matrix, print orders, artwork upload and payment.'],
+        ['/design', 'Design Studio', 'Graphic design orders (flyer, brochure, business card, presentation folder, stationery): services and prices, drafts with a brief, reference uploads, payment, proof approval and change requests.'],
         ['/payments', 'Payments & invoices', 'Payment history and GST tax invoices.'],
         ['/invoices', 'Payments & invoices', ''],
         ['/support', 'Support', 'Support threads between a business and EPFD staff.'],
@@ -48,6 +50,7 @@ final class OpenApiDocument
         ['/admin/runs', 'Admin · Campaigns & runs', ''],
         ['/admin/print-orders', 'Admin · Print orders', 'Staff only. Production status, artwork review, refunds.'],
         ['/admin/artworks', 'Admin · Print orders', ''],
+        ['/admin/design-orders', 'Admin · Design orders', 'Staff only. Design Studio queue: status, proofs (versioned, emailed to the business).'],
         ['/admin/payments', 'Admin · Payments', 'Staff only. All payments and refunds.'],
         ['/admin/rate-card', 'Admin · Pricing', 'Staff only. Versioned rate card and promo codes.'],
         ['/admin/promo-codes', 'Admin · Pricing', ''],
@@ -328,6 +331,8 @@ MD;
             str_starts_with($path, '/admin/campaigns'), str_starts_with($path, '/admin/runs') => 'campaigns.manage',
             str_starts_with($path, '/admin/print-orders') && $method === 'GET' => 'print_orders.view',
             str_starts_with($path, '/admin/print-orders'), str_starts_with($path, '/admin/artworks') => 'print_orders.manage',
+            str_starts_with($path, '/admin/design-orders') && $method === 'GET' => 'design_orders.view',
+            str_starts_with($path, '/admin/design-orders') => 'design_orders.manage',
             str_starts_with($path, '/admin/rate-card'), str_starts_with($path, '/admin/promo-codes') => 'rate_card.manage',
             str_starts_with($path, '/admin/suburbs') => 'service_areas.manage',
             default => null,
@@ -356,13 +361,14 @@ MD;
         if (str_contains($path, '{')) {
             $p[404] = ['not_found', 'The requested resource was not found.'];
         }
-        if (in_array(explode(' ', $id)[0], ['PATCH', 'PUT', 'DELETE'], true) && preg_match('#^/(campaigns|print/orders)/#', $path)
-            || preg_match('#/(submit|claim|publish|status)$#', $path)) {
+        if (in_array(explode(' ', $id)[0], ['PATCH', 'PUT', 'DELETE'], true) && preg_match('#^/(campaigns|print/orders|design/orders)/#', $path)
+            || preg_match('#/(submit|claim|publish|status|approve|request-changes|proofs)$#', $path)) {
             $p[409] ??= ['conflict', 'Only draft campaigns can be edited.'];
         }
         if ($hasInput) {
             $p[422] = match (true) {
                 str_contains($path, 'areas') || str_contains($path, 'estimate') => ['polygon_self_intersection', 'Edges cross each other.'],
+                str_contains($path, 'design') && ! str_contains($path, 'admin') => ['validation_failed', 'Complete the brief before paying.'],
                 str_contains($path, 'print') && ! str_contains($path, 'products') => ['pricing_unavailable_combination', 'That paper weight, sides and quantity combination is not available for this product.'],
                 default => ['validation_failed', 'The given data was invalid.'],
             };

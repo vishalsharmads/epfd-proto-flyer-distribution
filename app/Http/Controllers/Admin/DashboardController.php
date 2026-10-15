@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\AuditLog;
 use App\Models\Business;
 use App\Models\Campaign;
+use App\Models\DesignOrder;
 use App\Models\PrintOrder;
 use App\Models\Run;
 use App\Models\SupportThread;
@@ -49,8 +50,10 @@ class DashboardController extends AdminController
                 'revenue_month_cents' => (int) DB::table('payments')->whereIn('status', ['succeeded', 'partially_refunded', 'refunded'])->where('paid_at', '>=', $monthStart)
                     ->sum(DB::raw('amount_cents + credits_applied_cents - refunded_cents')),
                 'open_support' => SupportThread::whereIn('status', ['open', 'pending'])->count(),
-                'active_jobs' => Campaign::whereNotIn('status', ['draft', 'completed', 'cancelled'])->count() + PrintOrder::whereNotIn('status', ['draft', 'completed', 'cancelled'])->count(),
+                'active_jobs' => Campaign::whereNotIn('status', ['draft', 'completed', 'cancelled'])->count() + PrintOrder::whereNotIn('status', ['draft', 'completed', 'cancelled'])->count()
+                    + DesignOrder::whereNotIn('status', ['draft', 'completed', 'cancelled'])->count(),
                 'artwork_waiting' => PrintOrder::where('status', 'awaiting_artwork_approval')->count(),
+                'design_awaiting_proof' => DesignOrder::whereIn('status', DesignOrderController::AWAITING_PROOF)->count(),
             ],
             'jobs' => $jobs,
             'revenue' => $months,

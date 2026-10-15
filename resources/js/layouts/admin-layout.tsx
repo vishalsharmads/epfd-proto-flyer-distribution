@@ -19,6 +19,7 @@ import {
     MapPinned,
     Menu,
     Package,
+    Palette,
     Printer,
     Receipt,
     Search,
@@ -41,6 +42,7 @@ export const adminNav: { group: string; items: NavItem[] }[] = [
             { href: '/admin/businesses', label: 'Businesses', icon: Building2, permission: 'businesses.view' },
             { href: '/admin/campaigns', label: 'Distribution campaigns', icon: Send, permission: 'campaigns.view' },
             { href: '/admin/print-orders', label: 'Print orders', icon: Printer, permission: 'print_orders.view' },
+            { href: '/admin/design-orders', label: 'Design orders', icon: Palette, permission: 'design_orders.view' },
             { href: '/admin/pickup-points', label: 'Pickup points', icon: Warehouse, permission: 'pickup_points.manage' },
             { href: '/admin/service-areas', label: 'Service areas', icon: MapPinned, permission: 'service_areas.manage' },
         ],
@@ -120,6 +122,11 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
                                 <Command.Item onSelect={() => go('/admin/print-orders?status=awaiting_artwork_approval')} className="flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm data-[selected=true]:bg-surface-2">
                                     <Printer className="size-4 text-muted" /> Artwork awaiting review
                                 </Command.Item>
+                                {can('design_orders.view') && (
+                                    <Command.Item onSelect={() => go('/admin/design-orders?status=awaiting_proof')} className="flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm data-[selected=true]:bg-surface-2">
+                                        <Palette className="size-4 text-muted" /> Design orders awaiting a proof
+                                    </Command.Item>
+                                )}
                             </Command.Group>
                         </Command.List>
                     </Command>

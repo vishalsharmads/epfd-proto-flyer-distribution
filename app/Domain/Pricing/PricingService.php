@@ -17,6 +17,9 @@ use App\Exceptions\DomainProblem;
  *               topped up to the minimum fee, + GST.
  * Print:        quantity × matrix unit price (product/gsm/sides/qty) × finish factor + add-ons − promo,
  *               topped up to the minimum order, + GST.
+ * Design:       package price for the design type (× double-sided uplift) + add-ons (rush % of the design
+ *               line, fixed extras) − promo, + GST. A card without a `design` section falls back to
+ *               RateCardDefaults::design() so databases seeded before Design Studio keep working.
  */
 final class PricingService
 {
@@ -119,6 +122,66 @@ final class PricingService
             'quantity' => $qty, 'gsm' => $in['gsm'], 'sides' => $in['sides'], 'finish' => $finish,
             'turnaround_days' => (int) ($card['turnaround_days'] ?? 3),
         ]);
+    }
+
+    /**
+     * @param  array{design_type:string, package:string, sides?:int, addons?:list<string>, promo?: array{code:string,type:string,value:int}|null}  $in
+     */
+    public function design(array $in): Quote
+    {
+        $card = $this->designCard();
+        $type = $in['design_type'];
+        $package = $in['package'];
+        if (! isset($card['types'][$type])) {
+            throw new DomainProblem('pricing_unknown_design_type', "Unknown design type '{$type}'.");
+        }
+        if (! isset($card['packages'][$package], $card['types'][$type]['prices'][$package])) {
+            throw new DomainProblem('pricing_unknown_package', "Unknown design package '{$package}'.");
+        }
+        $t = $card['types'][$type];
+        $pkg = $card['packages'][$package];
+        $sides = ! empty($t['sides_option']) && (int) ($in['sides'] ?? 1) === 2 ? 2 : 1;
+
+        $hc = self::hc((float) $t['prices'][$package]);
+        if ($sides === 2) {
+            $hc = (int) round($hc * (1 + (float) ($card['double_sided_pct'] ?? 0) / 100));
+        }
+        $label = sprintf('%s — %s package%s', $t['label'], $pkg['label'], ! empty($t['sides_option']) ? ($sides === 2 ? ', double-sided' : ', single-sided') : '');
+        $lines = [self::line('design', $label, 1, $hc)];
+
+        $revisions = (int) $pkg['revisions'];
+        $turnaround = (int) $pkg['turnaround_days'];
+        $addons = array_values(array_unique($in['addons'] ?? []));
+        foreach ($addons as $code) {
+            $addon = $card['addons'][$code] ?? null;
+            if (! $addon) {
+                throw new DomainProblem('pricing_unknown_addon', "Unknown add-on '{$code}'.");
+            }
+            $amount = isset($addon['pct'])
+                ? (int) round($lines[0]['amount_cents'] * (float) $addon['pct'] / 100)
+                : self::cents((float) $addon['fixed']);
+            $lines[] = ['code' => 'addon_'.$code, 'label' => $addon['label'], 'quantity' => 1, 'unit_cents' => $amount, 'amount_cents' => $amount];
+            if ($code === 'extra_revision' && $revisions < 99) {
+                $revisions++;
+            }
+            if ($code === 'rush') {
+                $turnaround = min($turnaround, (int) ($card['rush_turnaround_days'] ?? 2));
+            }
+        }
+
+        [$lines, $promoCents] = $this->applyPromo($lines, $in['promo'] ?? null, 'design');
+
+        return $this->finish('design', $lines, $promoCents, 1, [
+            'design_type' => $type, 'package' => $package, 'sides' => $sides, 'addons' => $addons,
+            'revisions_included' => $revisions, 'revisions_unlimited' => $revisions >= 99, 'turnaround_days' => $turnaround,
+            'extra_revision_cents' => self::cents((float) ($card['addons']['extra_revision']['fixed'] ?? 0)),
+        ]);
+    }
+
+    /** The design section of the rate card, falling back to the built-in defaults. @return array<string, mixed> */
+    public function designCard(): array
+    {
+        return $this->rateCard['design'] ?? RateCardDefaults::design();
     }
 
     // ------------------------------------------------------------------ internals

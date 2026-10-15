@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\ContentController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DesignOrderController;
 use App\Http\Controllers\Admin\GnafController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PickupPointController;
@@ -64,6 +65,20 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
         Route::post('print-orders/{printOrder}/vendor', [PrintOrderController::class, 'vendor'])->name('print-orders.vendor');
         Route::post('print-orders/{printOrder}/proof', [PrintOrderController::class, 'uploadProof'])->name('print-orders.proof.upload');
         Route::post('print-orders/{printOrder}/artworks/{artwork}/review', [PrintOrderController::class, 'reviewArtwork'])->name('print-orders.artwork.review');
+    });
+
+    // Design Studio orders
+    Route::middleware('permission:design_orders.view')->group(function () {
+        Route::get('design-orders', [DesignOrderController::class, 'index'])->name('design-orders.index');
+        Route::get('design-orders/{designOrder}', [DesignOrderController::class, 'show'])->name('design-orders.show');
+        Route::get('design-orders/{designOrder}/assets/{asset}', [DesignOrderController::class, 'asset'])->name('design-orders.asset');
+    });
+    Route::middleware('permission:design_orders.manage')->group(function () {
+        Route::post('design-orders/{designOrder}/assign', [DesignOrderController::class, 'assign'])->name('design-orders.assign');
+        Route::post('design-orders/{designOrder}/status', [DesignOrderController::class, 'transition'])->name('design-orders.status');
+        Route::post('design-orders/{designOrder}/proofs', [DesignOrderController::class, 'uploadProof'])->name('design-orders.proofs');
+        Route::post('design-orders/{designOrder}/finals', [DesignOrderController::class, 'uploadFinal'])->name('design-orders.finals');
+        Route::post('design-orders/{designOrder}/messages', [DesignOrderController::class, 'message'])->name('design-orders.messages');
     });
 
     // Pickup points & service areas

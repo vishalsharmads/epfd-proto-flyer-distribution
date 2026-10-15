@@ -281,24 +281,11 @@ class PrintOrderController extends Controller
 
     private function applyProduct(PrintOrder $order, PrintProduct $p): void
     {
-        $gsm = (int) ($p->gsm_options[min(1, count($p->gsm_options) - 1)] ?? $p->gsm_options[0]);
-        $qtys = array_map('intval', $p->quantity_options);
-        $order->forceFill([
-            'print_product_id' => $p->id,
-            'gsm' => $gsm,
-            'finish' => ((array) ($p->finish_options[(string) $gsm] ?? ['matt']))[0],
-            'sides' => 1,
-            'orientation' => $p->width_mm > $p->height_mm ? 'landscape' : 'portrait',
-            'quantity' => in_array(1000, $qtys, true) ? 1000 : $qtys[intdiv(count($qtys), 2)],
-            'also_distribute' => false,
-        ])->save();
-        $order->artworks()->get()->each(fn (Artwork $a) => $this->removeArtwork($a));
-        PrintPricer::reprice($order->fresh(), []);
+        PrintPricer::applyProduct($order, $p);
     }
 
     private function removeArtwork(Artwork $a): void
     {
-        Storage::disk('local')->delete($a->path);
-        $a->delete();
+        PrintPricer::removeArtwork($a);
     }
 }

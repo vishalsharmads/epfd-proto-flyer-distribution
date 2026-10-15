@@ -3,13 +3,14 @@ import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparat
 import { cn } from '@/lib/utils';
 import type { SharedProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { AlertTriangle, Briefcase, ChevronDown, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Printer, Send, Settings, X } from 'lucide-react';
+import { AlertTriangle, Briefcase, ChevronDown, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Palette, Printer, Send, Settings, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 const nav = [
     { href: '/app', label: 'Dashboard', icon: LayoutDashboard, match: /^\/app\/?$/ },
     { href: '/app/print', label: 'Print Store', icon: Printer, match: /^\/app\/print/ },
+    { href: '/app/design', label: 'Design Studio', icon: Palette, match: /^\/app\/design/ },
     { href: '/app/distribution', label: 'Letterbox Distribution', icon: Send, match: /^\/app\/(distribution|campaigns)/ },
     { href: '/app/jobs', label: 'My Jobs', icon: Briefcase, match: /^\/app\/jobs/ },
 ];

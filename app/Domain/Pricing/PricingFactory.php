@@ -26,7 +26,11 @@ final class PricingFactory
             return RateCardDefaults::data();
         }
 
-        return RateCard::where('is_active', true)->latest('id')->value('data') ?? RateCardDefaults::data();
+        $card = RateCard::where('is_active', true)->latest('id')->value('data') ?? RateCardDefaults::data();
+        // Cards saved before Design Studio existed have no `design` section: use the defaults.
+        $card['design'] ??= RateCardDefaults::design();
+
+        return $card;
     }
 
     /** @return array<string, int> */

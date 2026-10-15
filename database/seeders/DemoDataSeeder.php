@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Domain\Campaigns\CampaignService;
+use App\Domain\Design\DesignService;
 use App\Domain\Payments\CheckoutService;
 use App\Domain\Runs\RunService;
 use App\Exceptions\DomainProblem;
@@ -12,6 +13,7 @@ use App\Http\Controllers\App\Support\PrintPricer;
 use App\Models\Business;
 use App\Models\Campaign;
 use App\Models\CampaignArea;
+use App\Models\DesignOrder;
 use App\Models\Message;
 use App\Models\Payment;
 use App\Models\PrintOrder;
@@ -24,6 +26,7 @@ use App\Support\Audit;
 use App\Support\Geo;
 use App\Support\Reference;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +38,9 @@ use RuntimeException;
  * runs, GPS tracks and audit logs are genuine. Requires `php artisan gnaf:import --sample`.
  *
  * Idempotent: users/businesses are upserted; the transactional data (campaigns, print orders, payments,
- * threads…) is only created when the VIC/QLD demo businesses have no campaigns yet.
+ * threads…) is only created when the VIC/QLD demo businesses have no campaigns yet. Design Studio orders
+ * have their own guard (only created when the demo businesses have no design orders), so an existing
+ * demo database gains them on the next seed without duplicating anything else.
  * Time travel (Carbon::setTestNow) spreads the activity over the last 12 months.
  */
 class DemoDataSeeder extends Seeder
@@ -63,11 +68,17 @@ class DemoDataSeeder extends Seeder
         private readonly CampaignService $campaigns,
         private readonly CheckoutService $checkout,
         private readonly RunService $runs,
+        private readonly DesignService $design,
     ) {}
 
     public function run(): void
     {
         config(['mail.default' => 'array', 'queue.default' => 'sync']);
+        // Every demo payment renders a tax-invoice PDF attachment; dompdf holds ~4 MB per render, which
+        // exceeds PHP's default 128 MB across ~30 demo payments.
+        if ((int) ini_get('memory_limit') > 0 && (int) ini_get('memory_limit') < 512) {
+            ini_set('memory_limit', '512M');
+        }
 
         $this->accounts();
 
@@ -76,15 +87,27 @@ class DemoDataSeeder extends Seeder
 
             return;
         }
+        $demo = [$this->biz['nsw']->id, $this->biz['vic']->id, $this->biz['qld']->id];
         if (Campaign::withTrashed()->whereIn('business_id', [$this->biz['vic']->id, $this->biz['qld']->id])->exists()) {
             $this->command?->info('DemoDataSeeder: demo jobs already present — skipping.');
+        } else {
+            $this->realNow = Carbon::now();
+            try {
+                $this->world();
+            } finally {
+                Carbon::setTestNow();
+                Auth::guard('web')->forgetUser();
+            }
+        }
+
+        if (DesignOrder::withTrashed()->whereIn('business_id', $demo)->exists()) {
+            $this->command?->info('DemoDataSeeder: demo design orders already present — skipping.');
 
             return;
         }
-
         $this->realNow = Carbon::now();
         try {
-            $this->world();
+            $this->designOrders();
         } finally {
             Carbon::setTestNow();
             Auth::guard('web')->forgetUser();
@@ -290,7 +313,7 @@ class DemoDataSeeder extends Seeder
         return $campaign;
     }
 
-    private function pay(Campaign|PrintOrder $payable, string $key, bool $useCredits = false): Payment
+    private function pay(Campaign|PrintOrder|DesignOrder $payable, string $key, bool $useCredits = false): Payment
     {
         $biz = $this->biz[$key];
         $user = $this->users[$key];
@@ -419,6 +442,133 @@ class DemoDataSeeder extends Seeder
             'side' => $side, 'path' => $path, 'original_name' => "{$side}-artwork.png", 'mime' => 'image/png',
             'size_bytes' => strlen($png), 'width_px' => $w, 'height_px' => $h, 'status' => 'pending',
         ]);
+    }
+
+    // ------------------------------------------------------------------ design studio
+
+    private function designOrders(): void
+    {
+        $ops = $this->staff['ops'];
+        // [business, type, package, sides, target status, days ago paid, headline, key message, options]
+        $specs = [
+            ['nsw', 'flyer', 'standard', 2, 'approved', 16, 'Now open Sundays', 'Harbour Coffee is now open 7 days — Sunday brunch from 8am with $5 flat whites.', ['changes' => 1, 'print' => true, 'product' => 'a5-flyers', 'logo' => true]],
+            ['vic', 'flyer', 'basic', 1, 'completed', 45, 'Back pain? Book a free assessment', 'New patients get a free 20-minute assessment this month.', ['finals' => true]],
+            ['vic', 'business_card', 'basic', 2, 'proof_ready', 4, 'Marcus Nguyen — Physiotherapist', 'Clean, clinical, Swan St Physio teal.', ['changes' => 1, 'proofs' => 2]],
+            ['qld', 'brochure', 'premium', 1, 'changes_requested', 6, 'Brunswick Bakery catering', 'Platters, cakes and sourdough for offices and events across Brisbane.', ['changes' => 1, 'logo' => true]],
+            ['nsw', 'stationery', 'standard', 1, 'in_design', 2, 'Harbour Coffee Co. stationery', 'Letterhead, compliments slip and envelope matching our new cups.', []],
+            ['qld', 'presentation_folder', 'standard', 1, 'submitted', 1, 'Corporate catering folder', 'Pocket folder for our catering menu and price list.', []],
+            ['nsw', 'flyer', 'premium', 1, 'draft', 0, 'Christmas trading hours', '', []],
+        ];
+
+        foreach ($specs as $i => [$key, $type, $package, $sides, $status, $ago, $headline, $message, $opt]) {
+            $biz = $this->biz[$key];
+            $user = $this->users[$key];
+            $at = $this->realNow->copy()->subDays($ago)->setTime(9 + $i % 5, 10 + $i);
+
+            $this->travel($at->copy()->subHours(3));
+            $this->as($user);
+            $productId = isset($opt['product']) ? PrintProduct::where('slug', $opt['product'])->value('id') : null;
+            $order = $this->design->createDraft($biz, $user, array_filter([
+                'design_type' => $type, 'package' => $package, 'sides' => $sides, 'print_product_id' => $productId,
+                'headline' => $headline, 'key_message' => $message ?: null,
+                'call_to_action' => 'Visit '.$biz->address, 'brand_colours' => $key === 'vic' ? 'Teal #0F766E, white' : 'Navy #1B2A4A, cream #F5EFE6',
+                'style_notes' => 'Friendly and uncluttered. Logo top-left.', 'target_audience' => 'Local residents within 3 km',
+                'due_date' => $ago > 0 ? null : $this->realNow->copy()->addDays(10)->toDateString(),
+                'addons' => $i === 0 ? ['stock_imagery'] : [],
+            ], fn ($v) => $v !== null && $v !== []));
+            $order->forceFill(['step' => 4])->save();
+            if (! empty($opt['logo'])) {
+                $this->design->addBriefUpload($order, $this->png('logo', $biz->name, 'LOGO', 400, 400), $user);
+            }
+            if ($status === 'draft') {
+                continue;
+            }
+
+            $this->travel($at);
+            $this->pay($order->refresh(), $key);
+            $order->refresh();
+
+            $flow = ['submitted', 'in_design', 'proof_ready', 'approved', 'completed'];
+            $target = $status === 'changes_requested' ? 2 : array_search($status, $flow, true);
+            $this->as($ops);
+            if ($target >= 1) {
+                $this->travel($at->copy()->addHours(4));
+                $this->design->assign($order, $ops, $ops);
+                $this->design->transition($order->refresh(), 'in_design', 'Picked up by the studio.');
+            }
+            if ($target >= 2) {
+                $version = 0;
+                $rounds = (int) ($opt['changes'] ?? 0);
+                for ($r = 0; $r <= $rounds; $r++) {
+                    $this->travel($at->copy()->addDays(1 + $r * 2));
+                    $this->as($ops);
+                    $version++;
+                    $this->design->uploadProof($order->refresh(), $this->png("proof-v{$version}", $headline, "PROOF v{$version}"), $ops, $version === 1 ? 'First concept — let us know what you think.' : 'Updated with your changes.');
+                    $lastRound = $r === $rounds;
+                    if ($lastRound && $status !== 'changes_requested') {
+                        break;
+                    }
+                    $this->travel($at->copy()->addDays(2 + $r * 2));
+                    $this->as($user);
+                    $this->design->requestChanges($order->refresh(), $user, $r === 0 ? 'Can the headline be bigger and the logo a little smaller?' : 'Nearly there — please use the darker shade of our brand colour.');
+                    if ($lastRound) {
+                        break;
+                    }
+                }
+            }
+            if ($status === 'changes_requested') {
+                $this->travel($at->copy()->addDays(3)->addHours(2));
+                $this->design->postMessage($order->refresh(), $ops, 'Thanks — working on it now, new proof tomorrow.', true);
+            }
+            if ($target >= 3) {
+                $this->travel($at->copy()->addDays(6));
+                $this->as($user);
+                $this->design->approve($order->refresh(), $user);
+            }
+            if (! empty($opt['print'])) {
+                $this->travel($at->copy()->addDays(6)->addHour());
+                $this->as($user);
+                $print = $this->design->createPrintOrder($order->refresh(), $user);
+                $print->forceFill(['right_to_print' => true])->save();
+                $this->pay($print->refresh(), $key);
+            }
+            if ($target >= 4) {
+                $this->travel($at->copy()->addDays(7));
+                $this->as($ops);
+                $this->design->uploadFinal($order->refresh(), $this->png('final', $headline, 'FINAL'), $ops, 'Print-ready PNG with 3 mm bleed.');
+                $this->design->transition($order->refresh(), 'completed', 'Final files delivered.');
+            }
+            if ($order->refresh()->status !== $status) {
+                throw new RuntimeException("Demo design order {$order->reference} ended as {$order->status}, expected {$status}.");
+            }
+        }
+    }
+
+    /** Generate a branded PNG (GD) and wrap it as an UploadedFile so it goes through the real upload path. */
+    private function png(string $name, string $headline, string $stamp, int $w = 620, int $h = 874): UploadedFile
+    {
+        $img = imagecreatetruecolor($w, $h);
+        imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
+        $ink = imagecolorallocate($img, 0x14, 0x14, 0x14);
+        $brand = imagecolorallocate($img, 0xE0, 0x0B, 0x33);
+        $accent = imagecolorallocate($img, 0xFF, 0xC4, 0x46);
+        if ($w === $h) {
+            imagefilledellipse($img, intdiv($w, 2), intdiv($h, 2), $w - 40, $h - 40, $brand);
+            imagestring($img, 5, intdiv($w, 2) - 40, intdiv($h, 2) - 8, $stamp, imagecolorallocate($img, 255, 255, 255));
+        } else {
+            imagefilledrectangle($img, 0, 0, $w, intdiv($h, 3), $brand);
+            imagefilledrectangle($img, 0, $h - 90, $w, $h, $accent);
+            imagestring($img, 5, 28, 60, mb_strimwidth(strtoupper($headline), 0, 60, '...'), imagecolorallocate($img, 255, 255, 255));
+            imagestring($img, 4, 28, intdiv($h, 3) + 40, 'Designed by the EPFD Design Studio', $ink);
+            imagestring($img, 5, $w - 150, $h - 55, $stamp, $ink);
+        }
+        $base = (string) tempnam(sys_get_temp_dir(), 'epfd-design-');
+        @unlink($base);
+        $path = $base.'.png';
+        imagepng($img, $path);
+        imagedestroy($img);
+
+        return new UploadedFile($path, "{$name}.png", 'image/png', null, true);
     }
 
     // ------------------------------------------------------------------ saved areas + support

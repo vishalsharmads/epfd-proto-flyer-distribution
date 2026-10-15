@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App;
 
+use App\Domain\Design\DesignService;
 use App\Http\Controllers\App\Support\Presenter;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignArea;
+use App\Models\DesignOrder;
 use App\Models\PrintOrder;
 use App\Models\Run;
 use App\Models\SavedArea;
@@ -15,12 +17,13 @@ use App\Models\SupportThread;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/** "My Jobs": unified list of campaigns + print orders, and the job detail pages. */
+/** "My Jobs": unified list of campaigns, print orders and design orders, and the job detail pages. */
 class JobController extends Controller
 {
     use AuthorizesRequests;
@@ -45,8 +48,17 @@ class JobController extends Controller
                 'url' => $o->status === 'draft' ? route('app.print.step', [$o, $o->print_product_id ? ($o->step >= 4 ? 'confirm' : 'specs') : 'product']) : route('app.jobs.print', $o),
             ]);
 
+        $designs = DesignOrder::where('business_id', $business->id)->latest('updated_at')->limit(200)->get()
+            ->map(fn (DesignOrder $d) => [
+                'key' => 'd'.$d->id, 'id' => $d->id, 'type' => 'design', 'reference' => $d->reference,
+                'name' => $d->displayName(), 'status' => $d->status, 'total_cents' => $d->total_cents,
+                'detail' => $d->headline ? '“'.mb_strimwidth($d->headline, 0, 60, '…').'”' : 'Brief not started',
+                'date' => ($d->submitted_at ?? $d->updated_at)?->toIso8601String(),
+                'url' => $d->status === 'draft' ? route('app.design.step', [$d, $d->step >= 4 ? 'confirm' : ($d->step >= 3 ? 'brief' : 'service')]) : route('app.jobs.design', $d),
+            ]);
+
         return Inertia::render('app/jobs/index', [
-            'jobs' => $campaigns->concat($orders)->sortByDesc('date')->values(),
+            'jobs' => $campaigns->concat($orders)->concat($designs)->sortByDesc('date')->values(),
             'filter' => $request->query('filter', 'all'),
             'q' => (string) $request->query('q', ''),
         ]);
@@ -87,6 +99,41 @@ class JobController extends Controller
                 'current' => $printOrder->status === 'cancelled' ? -1 : max(0, array_search($printOrder->status, PrintOrder::TIMELINE, true) ?: 0),
                 'cancelled' => $printOrder->status === 'cancelled',
                 'dates' => ['submitted' => $printOrder->submitted_at?->toIso8601String(), 'completed' => $printOrder->completed_at?->toIso8601String()],
+            ],
+        ]);
+    }
+
+    public function design(DesignOrder $designOrder, DesignService $design): Response|RedirectResponse
+    {
+        $this->authorize('view', $designOrder);
+        if ($designOrder->status === 'draft') {
+            return redirect()->route('app.design.step', [$designOrder, 'service']);
+        }
+        $product = $design->printProduct($designOrder);
+        $print = $designOrder->print_order_id ? $designOrder->printOrder()->first() : null;
+
+        return Inertia::render('app/jobs/design', [
+            'order' => Presenter::designOrder($designOrder),
+            'invoice' => $designOrder->invoice ? Presenter::invoice($designOrder->invoice) : null,
+            'thread' => Presenter::thread($designOrder->thread),
+            'catalogue' => Presenter::designCatalogue(),
+            'print' => [
+                'product' => $product ? ['id' => $product->id, 'name' => $product->name, 'distributable' => (bool) $product->distributable] : null,
+                'has_file' => $design->printableFiles($designOrder) !== [],
+                'order' => $print ? ['id' => $print->id, 'reference' => $print->reference, 'status' => $print->status, 'url' => $print->status === 'draft' ? route('app.print.step', [$print, 'specs']) : route('app.jobs.print', $print)] : null,
+            ],
+            'timeline' => [
+                'current' => $designOrder->status === 'cancelled' ? -1 : match ($designOrder->status) {
+                    'submitted' => 0, 'in_design', 'changes_requested' => 1, 'proof_ready' => 2, 'approved' => 3, 'completed' => 4, default => 0,
+                },
+                'cancelled' => $designOrder->status === 'cancelled',
+                'changes_requested' => $designOrder->status === 'changes_requested',
+                'dates' => [
+                    'submitted' => $designOrder->submitted_at?->toIso8601String(),
+                    'proof_ready' => ($lastProof = $designOrder->assets()->where('kind', 'proof')->max('created_at')) ? Carbon::parse($lastProof)->toIso8601String() : null,
+                    'approved' => $designOrder->approved_at?->toIso8601String(),
+                    'completed' => $designOrder->completed_at?->toIso8601String(),
+                ],
             ],
         ]);
     }
@@ -138,9 +185,13 @@ class JobController extends Controller
         return back()->with('success', "Saved “{$saved->name}” to your target areas.");
     }
 
-    private function job(string $type, int $id): Campaign|PrintOrder
+    private function job(string $type, int $id): Campaign|PrintOrder|DesignOrder
     {
-        $job = $type === 'campaign' ? Campaign::findOrFail($id) : PrintOrder::findOrFail($id);
+        $job = match ($type) {
+            'campaign' => Campaign::findOrFail($id),
+            'design' => DesignOrder::findOrFail($id),
+            default => PrintOrder::findOrFail($id),
+        };
         $this->authorize('view', $job);
 
         return $job;

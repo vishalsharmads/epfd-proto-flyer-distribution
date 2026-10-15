@@ -41,6 +41,11 @@ class Business extends Model
         return $this->hasMany(PrintOrder::class);
     }
 
+    public function designOrders(): HasMany
+    {
+        return $this->hasMany(DesignOrder::class);
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

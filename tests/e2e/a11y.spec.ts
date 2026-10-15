@@ -77,6 +77,21 @@ test.describe('business pages', () => {
         await page.request.delete(`/app/campaigns/${id}`, { headers: { 'X-XSRF-TOKEN': await xsrf(page) } }).catch(() => undefined);
     });
 
+    test('design studio hub @mobile', async ({ page }) => {
+        await page.goto('/app/design');
+        await expect(page.getByRole('heading', { level: 1, name: 'Design Studio' })).toBeVisible();
+        await scan(page);
+    });
+
+    test('design service step', async ({ page }) => {
+        await page.goto('/app/design/new');
+        await page.getByTestId('start-new-design').click();
+        await page.waitForURL(/\/app\/design\/\d+\/service$/);
+        await scan(page);
+        const id = page.url().match(/design\/(\d+)/)![1];
+        await page.request.delete(`/app/design/${id}`, { headers: { 'X-XSRF-TOKEN': await xsrf(page) } }).catch(() => undefined);
+    });
+
     test('print product step', async ({ page }) => {
         await page.goto('/app/print/new');
         await page.getByTestId('start-new-print').click();
@@ -97,6 +112,19 @@ test.describe('admin pages', () => {
 
     test('admin businesses', async ({ page }) => {
         await page.goto('/admin/businesses');
+        await scan(page);
+    });
+
+    test('admin design orders', async ({ page }) => {
+        await page.goto('/admin/design-orders');
+        await scan(page);
+    });
+
+    test('admin rate card design tab + preview', async ({ page }) => {
+        await page.goto('/admin/rate-card?tab=design');
+        await expect(page.getByRole('heading', { name: 'Design prices by service' })).toBeVisible();
+        await expect(page.getByRole('radio', { name: 'Design' })).toHaveAttribute('aria-checked', 'true');
+        await expect(page.getByText('Flyer design — Standard package, single-sided')).toBeVisible();
         await scan(page);
     });
 });

@@ -23,6 +23,7 @@ export interface RunState {
     campaignId?: number;
     campaignName?: string;
     printOrderId?: number;
+    designOrderId?: number;
 }
 
 export function readState(): RunState {

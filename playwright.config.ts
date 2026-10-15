@@ -6,8 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Project graph:
  *   setup (logs in demo + admin once, saves storage state; avoids the 10/min auth throttle)
- *     └─ flows      register · campaign-draw-modes · print-order   (write tests/e2e/.state/run.json)
- *          └─ followups  view-job · admin                           (read run.json)
+ *     └─ flows      register · campaign-draw-modes · print-order · design-order   (write tests/e2e/.state/run.json)
+ *          └─ followups  view-job · admin · design-review           (read run.json)
  *     └─ a11y       axe scans (desktop)
  *     └─ mobile     Pixel 7 (390px wide-ish) — a11y subset tagged @mobile + view-job
  */
@@ -31,13 +31,13 @@ export default defineConfig({
         { name: 'setup', testMatch: /auth\.setup\.ts/ },
         {
             name: 'flows',
-            testMatch: /(register|campaign-draw-modes|print-order)\.spec\.ts/,
+            testMatch: /(register|campaign-draw-modes|print-order|design-order)\.spec\.ts/,
             dependencies: ['setup'],
             use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
         },
         {
             name: 'followups',
-            testMatch: /(view-job|admin)\.spec\.ts/,
+            testMatch: /(view-job|admin|design-review)\.spec\.ts/,
             dependencies: ['flows'],
             use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
         },

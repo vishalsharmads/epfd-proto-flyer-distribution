@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
+use App\Domain\Pricing\RateCardDefaults;
 use App\Exceptions\DomainProblem;
 use App\Models\PrintOption;
 use App\Models\PrintProduct;
@@ -66,6 +67,23 @@ class RateCardController extends AdminController
             'data.print.addons.*.label' => ['required', 'string', 'max:80'],
             'data.print.addons.*.pct' => ['nullable', 'numeric', 'min:0', 'max:500'],
             'data.print.addons.*.fixed' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'data.design' => ['sometimes', 'array'],
+            'data.design.double_sided_pct' => ['required_with:data.design', 'numeric', 'min:0', 'max:500'],
+            'data.design.rush_turnaround_days' => ['required_with:data.design', 'integer', 'min:1', 'max:30'],
+            'data.design.types' => ['required_with:data.design', 'array', 'min:1'],
+            'data.design.types.*.label' => ['required', 'string', 'max:80'],
+            'data.design.types.*.sides_option' => ['boolean'],
+            'data.design.types.*.prices' => ['required', 'array'],
+            'data.design.types.*.prices.*' => ['required', 'numeric', 'min:0', 'max:100000'],
+            'data.design.packages' => ['required_with:data.design', 'array', 'min:1'],
+            'data.design.packages.*.label' => ['required', 'string', 'max:60'],
+            'data.design.packages.*.description' => ['nullable', 'string', 'max:255'],
+            'data.design.packages.*.revisions' => ['required', 'integer', 'min:0', 'max:99'],
+            'data.design.packages.*.turnaround_days' => ['required', 'integer', 'min:1', 'max:60'],
+            'data.design.addons' => ['present_with:data.design', 'array'],
+            'data.design.addons.*.label' => ['required', 'string', 'max:80'],
+            'data.design.addons.*.pct' => ['nullable', 'numeric', 'min:0', 'max:500'],
+            'data.design.addons.*.fixed' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ];
     }
 
@@ -92,6 +110,30 @@ class RateCardController extends AdminController
         }
         foreach ($d['print']['addons'] ?? [] as $k => $a) {
             $d['print']['addons'][$k] = isset($a['pct']) && $a['pct'] !== null && $a['pct'] !== ''
+                ? ['label' => $a['label'], 'pct' => (float) $a['pct']]
+                : ['label' => $a['label'], 'fixed' => (float) ($a['fixed'] ?? 0)];
+        }
+
+        $design = $d['design'] ?? RateCardDefaults::design();
+        $d['design'] = [
+            'double_sided_pct' => (float) ($design['double_sided_pct'] ?? 0),
+            'rush_turnaround_days' => (int) ($design['rush_turnaround_days'] ?? 2),
+            'types' => [],
+            'packages' => [],
+            'addons' => [],
+        ];
+        foreach ($design['packages'] ?? [] as $k => $p) {
+            $d['design']['packages'][$k] = ['label' => $p['label'], 'revisions' => (int) $p['revisions'], 'turnaround_days' => (int) $p['turnaround_days'], 'description' => (string) ($p['description'] ?? '')];
+        }
+        foreach ($design['types'] ?? [] as $k => $t) {
+            $prices = [];
+            foreach (array_keys($d['design']['packages']) as $pkg) {
+                $prices[$pkg] = (float) ($t['prices'][$pkg] ?? 0);
+            }
+            $d['design']['types'][$k] = ['label' => $t['label'], 'sides_option' => filter_var($t['sides_option'] ?? false, FILTER_VALIDATE_BOOL), 'prices' => $prices];
+        }
+        foreach ($design['addons'] ?? [] as $k => $a) {
+            $d['design']['addons'][$k] = isset($a['pct']) && $a['pct'] !== null && $a['pct'] !== ''
                 ? ['label' => $a['label'], 'pct' => (float) $a['pct']]
                 : ['label' => $a['label'], 'fixed' => (float) ($a['fixed'] ?? 0)];
         }
@@ -131,7 +173,7 @@ class RateCardController extends AdminController
     public function preview(Request $request): JsonResponse
     {
         $request->validate($this->rules() + [
-            'input.service' => ['required', 'in:distribution,print'],
+            'input.service' => ['required', 'in:distribution,print,design'],
             'input.promo' => ['nullable', 'string', 'max:40'],
         ]);
         $card = $this->normalise($request->input('data'));
@@ -139,7 +181,12 @@ class RateCardController extends AdminController
         $pricing = new PricingService($card, PricingFactory::printMatrix());
         try {
             $promo = ! empty($in['promo']) ? PricingFactory::promo($in['promo'], $in['service']) : null;
-            if ($in['service'] === 'distribution') {
+            if ($in['service'] === 'design') {
+                $quote = $pricing->design([
+                    'design_type' => (string) ($in['design_type'] ?? 'flyer'), 'package' => (string) ($in['package'] ?? 'standard'),
+                    'sides' => (int) ($in['sides'] ?? 1), 'addons' => array_values((array) ($in['addons'] ?? [])), 'promo' => $promo,
+                ]);
+            } elseif ($in['service'] === 'distribution') {
                 $quote = $pricing->distribution([
                     'houses' => (int) ($in['houses'] ?? 0), 'units' => (int) ($in['units'] ?? 0),
                     'coverage' => $in['coverage'] ?? 'houses_units', 'material' => $in['material'] ?? 'standard_dl', 'promo' => $promo,
@@ -188,7 +235,7 @@ class RateCardController extends AdminController
             'description' => ['nullable', 'string', 'max:255'],
             'type' => ['required', 'in:percent,fixed'],
             'value' => ['required', 'numeric', 'min:0.01', $promo?->type === 'percent' || request('type') === 'percent' ? 'max:100' : 'max:100000'],
-            'service' => ['required', 'in:any,distribution,print'],
+            'service' => ['required', 'in:any,distribution,print,design'],
             'min_subtotal' => ['nullable', 'numeric', 'min:0'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
