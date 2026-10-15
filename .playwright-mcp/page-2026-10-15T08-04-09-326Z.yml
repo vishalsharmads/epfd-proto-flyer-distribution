@@ -1,0 +1,116 @@
+- generic [ref=f42e2]:
+  - generic [ref=f42e3]:
+    - link "Skip to content" [ref=f42e4] [cursor=pointer]:
+      - /url: "#main"
+    - status [ref=f42e5]:
+      - paragraph [ref=f42e8]:
+        - strong [ref=f42e9]: Awaiting approval.
+        - text: You can build drafts now; payment unlocks once an EPFD admin approves your business.
+      - button "Dismiss" [ref=f42e10]
+    - banner [ref=f42e14]:
+      - generic [ref=f42e15]:
+        - link "EPFD home" [ref=f42e16] [cursor=pointer]:
+          - /url: /app
+          - img "Easy Peasy Flyer Distribution" [ref=f42e18]
+        - navigation "Main" [ref=f42e19]:
+          - link "Dashboard" [ref=f42e20] [cursor=pointer]:
+            - /url: /app
+          - link "Print Store" [ref=f42e26] [cursor=pointer]:
+            - /url: /app/print
+          - link "Letterbox Distribution" [ref=f42e31] [cursor=pointer]:
+            - /url: /app/distribution
+          - link "My Jobs" [ref=f42e35] [cursor=pointer]:
+            - /url: /app/jobs
+        - generic [ref=f42e39]:
+          - button "Switch to dark mode" [ref=f42e40]
+          - button "Account menu" [ref=f42e43]:
+            - generic [ref=f42e44]: TB
+            - generic [ref=f42e45]: Tess
+    - main [ref=f42e48]:
+      - generic [ref=f42e49]:
+        - generic [ref=f42e50]:
+          - generic [ref=f42e51]: Test Bakery
+          - heading "G'day, Tess" [level=1] [ref=f42e52]
+          - paragraph [ref=f42e53]: Your distribution and print at a glance.
+        - generic [ref=f42e54]:
+          - link "New Print Order" [ref=f42e55] [cursor=pointer]:
+            - /url: /app/print/new
+          - link "New Campaign" [ref=f42e60] [cursor=pointer]:
+            - /url: /app/campaigns/new
+      - region "Key figures" [ref=f42e62]:
+        - generic [ref=f42e63]:
+          - generic [ref=f42e64]: Total flyers
+          - generic [ref=f42e69]: "0"
+          - generic [ref=f42e70]: Paid campaigns (estimated letterboxes)
+        - generic [ref=f42e71]:
+          - generic [ref=f42e72]: Active runs
+          - generic [ref=f42e79]: "0"
+          - generic [ref=f42e80]: Published to delivery
+        - generic [ref=f42e81]:
+          - generic [ref=f42e82]: Success rate
+          - generic [ref=f42e87]: —
+          - generic [ref=f42e88]: 0 of 0 runs completed
+        - generic [ref=f42e89]:
+          - generic [ref=f42e90]: Support requests
+          - generic [ref=f42e99]: "0"
+          - generic [ref=f42e100]: Open threads
+        - generic [ref=f42e101]:
+          - generic [ref=f42e102]: Credits
+          - generic [ref=f42e107]: $0.00
+          - generic [ref=f42e108]: Applied at checkout
+      - generic [ref=f42e109]:
+        - generic [ref=f42e110]:
+          - generic [ref=f42e112]:
+            - heading "Run outcomes" [level=2] [ref=f42e113]
+            - paragraph [ref=f42e114]: All runs across your campaigns
+          - generic [ref=f42e116]:
+            - heading "No runs yet" [level=3] [ref=f42e123]
+            - paragraph [ref=f42e124]: Runs appear once your first campaign is published to distributors.
+            - link "Create a campaign" [ref=f42e126] [cursor=pointer]:
+              - /url: /app/campaigns/new
+        - generic [ref=f42e127]:
+          - generic [ref=f42e129]:
+            - heading "Flyers distributed" [level=2] [ref=f42e130]
+            - paragraph [ref=f42e131]: Completed runs, last 12 months
+          - generic [ref=f42e133]:
+            - heading "Nothing delivered yet" [level=3] [ref=f42e138]
+            - paragraph [ref=f42e139]: Completed runs will chart here month by month.
+      - generic [ref=f42e140]:
+        - generic [ref=f42e141]:
+          - generic [ref=f42e143]:
+            - heading "Get started" [level=2] [ref=f42e144]
+            - paragraph [ref=f42e145]: Draw an area, see the price, pay — done.
+          - generic [ref=f42e146]:
+            - link [ref=f42e147] [cursor=pointer]:
+              - /url: /app/campaigns/new
+              - paragraph [ref=f42e153]: Letterbox distribution
+              - paragraph [ref=f42e154]: Pick suburbs or draw areas. Live houses, units and price.
+            - link [ref=f42e155] [cursor=pointer]:
+              - /url: /app/print/new
+              - paragraph [ref=f42e160]: Print store
+              - paragraph [ref=f42e161]: Flyers, brochures, magnets and more — from 3c a piece.
+        - generic [ref=f42e162]:
+          - generic [ref=f42e163]:
+            - heading "Support" [level=2] [ref=f42e165]
+            - link "View all" [ref=f42e166] [cursor=pointer]:
+              - /url: /app/support
+          - generic [ref=f42e172]:
+            - strong [ref=f42e173]: All clear.
+            - text: No open requests.
+    - contentinfo [ref=f42e174]:
+      - generic [ref=f42e175]:
+        - generic [ref=f42e176]:
+          - img "Easy Peasy Flyer Distribution" [ref=f42e178]
+          - paragraph [ref=f42e179]: Smart Distribution for Smarter Marketing
+          - paragraph [ref=f42e180]: Serving Sydney, Melbourne, Wollongong, Newcastle.
+        - generic [ref=f42e181]:
+          - paragraph [ref=f42e182]: Contact
+          - paragraph [ref=f42e183]:
+            - link "0493 243 666" [ref=f42e184] [cursor=pointer]:
+              - /url: tel:0493243666
+          - paragraph [ref=f42e185]:
+            - link "Operations@epfd.com.au" [ref=f42e186] [cursor=pointer]:
+              - /url: mailto:Operations@epfd.com.au
+          - paragraph [ref=f42e187]: Y-03, 257 Victoria Road, Rydalmere NSW 2116
+      - paragraph [ref=f42e189]: © 2026 Easy Peasy Flyer Distribution. All prices in AUD and include GST unless stated.
+  - region "Notifications alt+T"

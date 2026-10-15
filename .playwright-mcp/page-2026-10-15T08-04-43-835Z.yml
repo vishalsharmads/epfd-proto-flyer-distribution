@@ -1,0 +1,249 @@
+- generic [ref=f44e2]:
+  - generic [ref=f44e3]:
+    - complementary [ref=f44e4]:
+      - generic [ref=f44e5]:
+        - img "Easy Peasy Flyer Distribution" [ref=f44e7]
+        - generic [ref=f44e8]: Admin
+      - navigation "Admin" [ref=f44e9]:
+        - generic [ref=f44e10]:
+          - paragraph [ref=f44e11]: Overview
+          - list [ref=f44e12]:
+            - listitem [ref=f44e13]:
+              - link "Dashboard" [ref=f44e14] [cursor=pointer]:
+                - /url: /admin
+        - generic [ref=f44e18]:
+          - paragraph [ref=f44e19]: Operations
+          - list [ref=f44e20]:
+            - listitem [ref=f44e21]:
+              - link "Businesses" [ref=f44e22] [cursor=pointer]:
+                - /url: /admin/businesses
+            - listitem [ref=f44e27]:
+              - link "Distribution campaigns" [ref=f44e28] [cursor=pointer]:
+                - /url: /admin/campaigns
+            - listitem [ref=f44e32]:
+              - link "Print orders" [ref=f44e33] [cursor=pointer]:
+                - /url: /admin/print-orders
+            - listitem [ref=f44e38]:
+              - link "Pickup points" [ref=f44e39] [cursor=pointer]:
+                - /url: /admin/pickup-points
+            - listitem [ref=f44e43]:
+              - link "Service areas" [ref=f44e44] [cursor=pointer]:
+                - /url: /admin/service-areas
+        - generic [ref=f44e49]:
+          - paragraph [ref=f44e50]: Finance
+          - list [ref=f44e51]:
+            - listitem [ref=f44e52]:
+              - link "Rate card & promos" [ref=f44e53] [cursor=pointer]:
+                - /url: /admin/rate-card
+            - listitem [ref=f44e56]:
+              - link "Payments & invoices" [ref=f44e57] [cursor=pointer]:
+                - /url: /admin/payments
+            - listitem [ref=f44e61]:
+              - link "Reports" [ref=f44e62] [cursor=pointer]:
+                - /url: /admin/reports
+        - generic [ref=f44e65]:
+          - paragraph [ref=f44e66]: Support
+          - list [ref=f44e67]:
+            - listitem [ref=f44e68]:
+              - link "Support inbox" [ref=f44e69] [cursor=pointer]:
+                - /url: /admin/support
+            - listitem [ref=f44e73]:
+              - link "Content (FAQs, T&Cs)" [ref=f44e74] [cursor=pointer]:
+                - /url: /admin/content
+        - generic [ref=f44e78]:
+          - paragraph [ref=f44e79]: System
+          - list [ref=f44e80]:
+            - listitem [ref=f44e81]:
+              - link "G-NAF data status" [ref=f44e82] [cursor=pointer]:
+                - /url: /admin/gnaf
+            - listitem [ref=f44e87]:
+              - link "Users & roles" [ref=f44e88] [cursor=pointer]:
+                - /url: /admin/users
+            - listitem [ref=f44e92]:
+              - link "Audit log" [ref=f44e93] [cursor=pointer]:
+                - /url: /admin/audit-log
+            - listitem [ref=f44e98]:
+              - link "API docs" [ref=f44e99] [cursor=pointer]:
+                - /url: /docs
+    - generic [ref=f44e104]:
+      - banner [ref=f44e105]:
+        - button "Search or jump to… ⌘K" [ref=f44e106]:
+          - generic [ref=f44e110]: Search or jump to…
+          - generic [ref=f44e111]: ⌘K
+        - generic [ref=f44e112]:
+          - generic [ref=f44e113]: Avery Admin · super admin
+          - button "Switch to dark mode" [ref=f44e114]
+          - button "Log out" [ref=f44e117]
+      - main [ref=f44e121]:
+        - generic [ref=f44e122]:
+          - heading "Rate card & promos" [level=1] [ref=f44e123]
+          - generic [ref=f44e124]:
+            - button "Save new version" [disabled]
+        - tablist [ref=f44e125]:
+          - tab "Distribution" [selected] [ref=f44e126]
+          - tab "Print" [ref=f44e127]
+          - tab "Print price matrix" [ref=f44e128]
+          - tab "Promo codes 3" [ref=f44e129]:
+            - text: Promo codes
+            - generic [ref=f44e130]: "3"
+          - tab "History 2" [ref=f44e131]:
+            - text: History
+            - generic [ref=f44e132]: "2"
+        - generic [ref=f44e133]:
+          - generic [ref=f44e134]:
+            - generic [ref=f44e135]:
+              - generic [ref=f44e137]:
+                - heading "Price per letterbox by coverage" [level=2] [ref=f44e138]
+                - paragraph [ref=f44e139]: Ex GST, AUD per item
+              - generic [ref=f44e140]:
+                - generic [ref=f44e141]:
+                  - generic [ref=f44e142]: Houses + units
+                  - generic [ref=f44e144]:
+                    - generic: $
+                    - spinbutton "Houses + units" [ref=f44e145]: "0.81"
+                - generic [ref=f44e146]:
+                  - generic [ref=f44e147]: Houses only
+                  - generic [ref=f44e149]:
+                    - generic: $
+                    - spinbutton "Houses only" [ref=f44e150]: "1.11"
+                - generic [ref=f44e151]:
+                  - generic [ref=f44e152]: Units only
+                  - generic [ref=f44e154]:
+                    - generic: $
+                    - spinbutton "Units only" [ref=f44e155]: "2.989"
+            - generic [ref=f44e156]:
+              - generic [ref=f44e158]:
+                - heading "Material add-ons" [level=2] [ref=f44e159]
+                - paragraph [ref=f44e160]: Added per item, ex GST
+              - generic [ref=f44e161]:
+                - generic [ref=f44e162]:
+                  - generic [ref=f44e163]: Standard DL
+                  - generic [ref=f44e165]:
+                    - generic: +$
+                    - spinbutton "Standard DL add-on" [ref=f44e166]: "0"
+                - generic [ref=f44e167]:
+                  - generic [ref=f44e168]: A5
+                  - generic [ref=f44e170]:
+                    - generic: +$
+                    - spinbutton "A5 add-on" [ref=f44e171]: "0"
+                - generic [ref=f44e172]:
+                  - generic [ref=f44e173]: Folded
+                  - generic [ref=f44e175]:
+                    - generic: +$
+                    - spinbutton "Folded add-on" [ref=f44e176]: "0.01"
+                - generic [ref=f44e177]:
+                  - generic [ref=f44e178]: Envelope
+                  - generic [ref=f44e180]:
+                    - generic: +$
+                    - spinbutton "Envelope add-on" [ref=f44e181]: "0.02"
+                - generic [ref=f44e182]:
+                  - generic [ref=f44e183]: Magnet
+                  - generic [ref=f44e185]:
+                    - generic: +$
+                    - spinbutton "Magnet add-on" [ref=f44e186]: "0.04"
+                - generic [ref=f44e187]:
+                  - generic [ref=f44e188]: Booklet
+                  - generic [ref=f44e190]:
+                    - generic: +$
+                    - spinbutton "Booklet add-on" [ref=f44e191]: "0.06"
+                - generic [ref=f44e192]:
+                  - generic [ref=f44e193]: Double Up Flyer
+                  - generic [ref=f44e195]:
+                    - generic: +$
+                    - spinbutton "Double Up Flyer add-on" [ref=f44e196]: "0.08"
+                - generic [ref=f44e197]:
+                  - generic [ref=f44e198]: Magazine
+                  - generic [ref=f44e200]:
+                    - generic: +$
+                    - spinbutton "Magazine add-on" [ref=f44e201]: "0.1"
+            - generic [ref=f44e202]:
+              - generic [ref=f44e203]:
+                - generic [ref=f44e204]:
+                  - heading "Quantity bands" [level=2] [ref=f44e205]
+                  - paragraph [ref=f44e206]: Volume discount applied when letterboxes ≥ minimum
+                - button "Add band" [ref=f44e207]
+              - generic [ref=f44e209]:
+                - generic [ref=f44e210]:
+                  - generic [ref=f44e211]:
+                    - generic [ref=f44e212]: Minimum letterboxes
+                    - spinbutton "Band 1 minimum" [ref=f44e215]: "0"
+                  - generic [ref=f44e216]:
+                    - generic [ref=f44e217]: Discount
+                    - generic [ref=f44e219]:
+                      - spinbutton "Band 1 discount" [ref=f44e220]: "0"
+                      - generic: "%"
+                  - button "Remove band 1" [ref=f44e221]
+                - generic [ref=f44e225]:
+                  - spinbutton "Band 2 minimum" [ref=f44e229]: "5000"
+                  - generic [ref=f44e232]:
+                    - spinbutton "Band 2 discount" [ref=f44e233]: "3"
+                    - generic: "%"
+                  - button "Remove band 2" [ref=f44e234]
+                - generic [ref=f44e238]:
+                  - spinbutton "Band 3 minimum" [ref=f44e242]: "10000"
+                  - generic [ref=f44e245]:
+                    - spinbutton "Band 3 discount" [ref=f44e246]: "5"
+                    - generic: "%"
+                  - button "Remove band 3" [ref=f44e247]
+                - generic [ref=f44e251]:
+                  - spinbutton "Band 4 minimum" [ref=f44e255]: "20000"
+                  - generic [ref=f44e258]:
+                    - spinbutton "Band 4 discount" [ref=f44e259]: "8"
+                    - generic: "%"
+                  - button "Remove band 4" [ref=f44e260]
+            - generic [ref=f44e264]:
+              - heading "Fees, pay & tax" [level=2] [ref=f44e267]
+              - generic [ref=f44e268]:
+                - generic [ref=f44e269]:
+                  - generic [ref=f44e270]: Minimum distribution fee
+                  - generic [ref=f44e272]:
+                    - generic: $
+                    - spinbutton "Minimum fee" [ref=f44e273]: "20"
+                  - paragraph [ref=f44e274]: Ex GST, per campaign
+                - generic [ref=f44e275]:
+                  - generic [ref=f44e276]: Distributor pay per item
+                  - generic [ref=f44e278]:
+                    - generic: $
+                    - spinbutton "Distributor pay per item" [ref=f44e279]: "0.32"
+                  - paragraph [ref=f44e280]: Default run pay = flyers × this
+                - generic [ref=f44e281]:
+                  - generic [ref=f44e282]: GST rate
+                  - spinbutton "GST rate" [ref=f44e285]: "0.1"
+                  - paragraph [ref=f44e286]: 0.10 = 10%
+          - generic [ref=f44e287]:
+            - generic [ref=f44e289]:
+              - heading "Price preview" [level=2] [ref=f44e290]
+              - paragraph [ref=f44e291]: Same pricing engine as checkout, using your unsaved draft
+            - generic [ref=f44e294]:
+              - radiogroup "Service" [ref=f44e295]:
+                - radio "Distribution" [checked] [ref=f44e296]
+                - radio "Print" [ref=f44e297]
+              - generic [ref=f44e298]:
+                - generic [ref=f44e299]:
+                  - generic [ref=f44e300]: Coverage
+                  - combobox "Coverage" [ref=f44e301]:
+                    - option "Houses + units" [selected]
+                    - option "Houses only"
+                    - option "Units only"
+                - generic [ref=f44e302]:
+                  - generic [ref=f44e303]: Material
+                  - combobox "Material" [ref=f44e304]:
+                    - option "Standard DL" [selected]
+                    - option "A5"
+                    - option "Folded"
+                    - option "Envelope"
+                    - option "Magnet"
+                    - option "Booklet"
+                    - option "Double Up Flyer"
+                    - option "Magazine"
+                - generic [ref=f44e305]:
+                  - generic [ref=f44e306]: Houses
+                  - spinbutton "Houses" [ref=f44e307]: "4000"
+                - generic [ref=f44e308]:
+                  - generic [ref=f44e309]: Units
+                  - spinbutton "Units" [ref=f44e310]: "1200"
+              - generic [ref=f44e311]:
+                - generic [ref=f44e312]: Promo code(optional)
+                - textbox "Promo code(optional)" [ref=f44e313]:
+                  - /placeholder: e.g. WELCOME10
+  - region "Notifications alt+T"

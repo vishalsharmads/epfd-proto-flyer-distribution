@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([RolesSeeder::class, CatalogueSeeder::class]);
+        $this->call([RolesSeeder::class, CatalogueSeeder::class, ContentSeeder::class]);
 
         // Staff: one user per admin role. Password for every seeded account: "password".
         foreach (['super_admin' => ['admin@epfd.test', 'Avery Admin'], 'operations' => ['ops@epfd.test', 'Olivia Operations'], 'finance' => ['finance@epfd.test', 'Felix Finance'], 'support' => ['support@epfd.test', 'Sam Support']] as $role => [$email, $name]) {

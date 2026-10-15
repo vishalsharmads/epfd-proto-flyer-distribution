@@ -19,6 +19,8 @@ return [
         'phone' => '0493 243 666',
         'email' => 'Operations@epfd.com.au',
         'address' => 'Y-03, 257 Victoria Road, Rydalmere NSW 2116',
+        // EPFD's own ABN for tax invoices — NEEDS HUMAN INPUT (not published on epfd.com.au).
+        'abn' => env('EPFD_ABN'),
         'logo' => 'brand/logo.png',
         'primary' => '#E00B33',
         'ink' => '#141414',

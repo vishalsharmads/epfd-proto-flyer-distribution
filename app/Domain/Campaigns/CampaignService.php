@@ -31,7 +31,7 @@ final class CampaignService
     {
         $tz = config('epfd.timezone');
 
-        return Campaign::create([
+        $campaign = Campaign::create([
             'business_id' => $business->id,
             'user_id' => $user->id,
             'reference' => Reference::make('CMP', 'campaigns'),
@@ -43,6 +43,9 @@ final class CampaignService
             'available_from' => $attrs['available_from'] ?? now($tz)->toDateString(),
             ...array_intersect_key($attrs, array_flip(['include_houses', 'include_units', 'coverage', 'material', 'notes', 'print_order_id', 'source_campaign_id'])),
         ]);
+
+        // Reload so database defaults (include_houses, coverage…) are populated.
+        return $campaign->fresh() ?? $campaign;
     }
 
     /** Re-run: copy a past campaign's areas/settings into a new draft. */
@@ -85,7 +88,7 @@ final class CampaignService
             $rows[] = [
                 'name' => trim((string) ($area['name'] ?? '')) ?: 'Run area '.($i + 1),
                 'position' => $i + 1,
-                'draw_mode' => in_array($area['draw_mode'] ?? 'pins', ['pins', 'trace', 'suburb'], true) ? $area['draw_mode'] : 'pins',
+                'draw_mode' => in_array($area['draw_mode'] ?? null, ['pins', 'trace', 'suburb'], true) ? $area['draw_mode'] : 'pins',
                 'suburb_id' => $area['suburb_id'] ?? null,
                 'geom' => Geo::fromGeoJson($r['polygon']),
                 'polygon_hash' => $r['hash'],
