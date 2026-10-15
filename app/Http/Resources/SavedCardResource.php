@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Resources;
+
+use App\Models\SavedCard;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin SavedCard */
+class SavedCardResource extends JsonResource
+{
+    /** @return array<string, mixed> */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'brand' => $this->brand,
+            'last4' => $this->last4,
+            'exp_month' => $this->exp_month,
+            'exp_year' => $this->exp_year,
+            'holder_name' => $this->holder_name,
+            'is_default' => $this->is_default,
+        ];
+    }
+}

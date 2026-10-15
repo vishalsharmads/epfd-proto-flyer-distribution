@@ -49,6 +49,10 @@ final class ProblemJson
         'promo_invalid' => [422, 'Promo code unknown, expired or not applicable.'],
         'payment_declined' => [402, 'The card was declined by the payment gateway.'],
         'letterbox_source_unavailable' => [503, 'The configured letterbox data source is unavailable.'],
+        'invalid_state' => [409, 'The resource is not in a state that allows this action (e.g. run status transition).'],
+        'pricing_unknown_addon' => [422, 'Unknown print add-on code.'],
+        'webhook_signature_invalid' => [400, 'Webhook signature missing or invalid.'],
+        'refund_failed' => [502, 'The payment gateway rejected the refund.'],
         'server_error' => [500, 'Unexpected error. The `instance` id is logged.'],
     ];
 

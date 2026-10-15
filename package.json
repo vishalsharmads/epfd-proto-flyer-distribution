@@ -4,7 +4,10 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "postinstall": "node scripts/copy-swagger-ui.mjs",
+        "lint": "eslint resources/js tests/e2e",
+        "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.13.0",
