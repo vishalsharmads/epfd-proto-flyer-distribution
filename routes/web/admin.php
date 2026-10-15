@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ContentController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DesignOrderController;
 use App\Http\Controllers\Admin\GnafController;
+use App\Http\Controllers\Admin\GnafGuideController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PickupPointController;
 use App\Http\Controllers\Admin\PrintOrderController;
@@ -141,6 +142,7 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     });
 
     Route::get('gnaf', GnafController::class)->middleware('permission:gnaf.view')->name('gnaf');
+    Route::get('gnaf/guide', GnafGuideController::class)->middleware('permission:gnaf.view')->name('gnaf.guide');
 
     Route::middleware('permission:users.manage')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');

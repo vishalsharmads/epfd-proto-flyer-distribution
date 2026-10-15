@@ -35,7 +35,7 @@ export default function ServiceAreaShow({ suburb, parts, area_km2, addresses }: 
             </p>
             {suburb.boundary_source === 'derived' && (
                 <Alert tone="warning" className="mb-6" title="Approximate boundary">
-                    Derived from the G-NAF address points (concave hull). Import official ABS SAL boundaries with <code>php artisan suburbs:import</code>.
+                    Derived from the G-NAF address points (concave hull). Import official Geoscape locality boundaries with <code>php artisan suburbs:import</code>; localities that are not gazetted have no official boundary.
                 </Alert>
             )}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
