@@ -1,0 +1,3 @@
+CODE|NAME|DESCRIPTION
+C|CONFIRMED|A confirmed street is present in the roads data of the PSMA Transport and Topography product for the same release.
+U|UNCONFIRMED|An unconfirmed street is NOT present in the roads data of the PSMA Transport and Topography product for the same release and will not have a street locality geocode.
