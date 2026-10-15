@@ -77,6 +77,7 @@ export default function CampaignAudience({ campaign: initial }: { campaign: Camp
                     )
                 }
             >
+                <h1 className="sr-only">{campaign.name}: choose your audience</h1>
                 <AudienceMap
                     className="absolute inset-0"
                     areas={initial.areas}

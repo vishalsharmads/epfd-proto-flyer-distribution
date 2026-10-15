@@ -62,7 +62,7 @@ export default function Dashboard({ stats, outcomes, monthly, threads }: Props) 
                 <StatTile label="Credits" value={money(stats.credits_cents)} hint="Applied at checkout" icon={Wallet} />
             </section>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <Card>
                     <CardHeader title="Run outcomes" description="All runs across your campaigns" />
                     <CardBody>
@@ -129,10 +129,10 @@ export default function Dashboard({ stats, outcomes, monthly, threads }: Props) 
                 </Card>
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-2">
                     <CardHeader title="Get started" description={stats.drafts ? `You have ${stats.drafts} draft campaign${stats.drafts === 1 ? '' : 's'}.` : 'Draw an area, see the price, pay — done.'} />
-                    <CardBody className="grid gap-4 sm:grid-cols-2">
+                    <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Link href="/app/campaigns/new" className="group rounded-[14px] border border-border p-5 transition-colors hover:bg-surface-2">
                             <Truck className="mb-3 size-6 text-primary" aria-hidden />
                             <p className="font-semibold">Letterbox distribution</p>

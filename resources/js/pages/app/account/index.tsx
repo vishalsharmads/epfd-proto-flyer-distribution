@@ -116,7 +116,7 @@ function Payments({ cards, credits_cents }: Pick<Props, 'cards' | 'credits_cents
 function Invoices({ invoices }: Pick<Props, 'invoices'>) {
     if (!invoices.length) return <EmptyState icon={FileText} title="No invoices yet" description="A GST tax invoice is issued for every payment." action={<Button asChild><Link href="/app/campaigns/new">Start a campaign</Link></Button>} />;
     return (
-        <Card className="overflow-x-auto">
+        <Card className="relative overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
                 <thead>
                     <tr className="border-b border-border text-left text-xs text-muted uppercase">
@@ -131,8 +131,8 @@ function Invoices({ invoices }: Pick<Props, 'invoices'>) {
                 <tbody className="divide-y divide-border">
                     {invoices.map((i) => (
                         <tr key={i.id}>
-                            <td className="px-5 py-3">{date(i.issued_at)}</td>
-                            <td className="px-5 py-3 font-medium">{i.number}</td>
+                            <td className="px-5 py-3 whitespace-nowrap">{date(i.issued_at)}</td>
+                            <td className="px-5 py-3 font-medium whitespace-nowrap">{i.number}</td>
                             <td className="px-5 py-3 text-muted">{i.reference ?? '—'}</td>
                             <td className="tabular px-5 py-3 text-right">{money(i.total_cents)}<span className="block text-xs text-subtle">GST {money(i.gst_cents)}</span></td>
                             <td className="px-5 py-3"><StatusBadge status={i.status} /></td>

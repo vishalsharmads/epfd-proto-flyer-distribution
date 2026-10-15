@@ -88,7 +88,7 @@ export default function Jobs({ jobs, filter: initialFilter, q: initialQ }: { job
                             </div>
                             <span className="hidden text-sm text-muted md:block">{date(j.date)}</span>
                             <span className="tabular hidden w-24 text-right text-sm font-medium sm:block">{money(j.total_cents)}</span>
-                            <span className="w-36 text-right">{j.status === 'draft' ? <Badge>Draft</Badge> : <StatusBadge status={j.status} />}</span>
+                            <span className="shrink-0 text-right sm:min-w-36">{j.status === 'draft' ? <Badge>Draft</Badge> : <StatusBadge status={j.status} />}</span>
                         </Link>
                     ))}
                 </Card>

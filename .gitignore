@@ -35,3 +35,7 @@ Thumbs.db
 /test-results
 /tests/e2e/.auth
 /tests/e2e/.state
+
+/tests/e2e/qa/.auth
+/tests/e2e/qa/shots
+/tests/e2e/qa/results*.json

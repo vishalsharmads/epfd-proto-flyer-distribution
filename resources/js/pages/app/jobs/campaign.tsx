@@ -46,7 +46,7 @@ export default function CampaignJob({ campaign: c, runs, invoice, thread, print_
                     </>
                 }
             />
-            <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="space-y-6">
                     <Card className="overflow-hidden">
                         <CardHeader title="Areas & GPS coverage" description={`${c.areas.length} area${c.areas.length === 1 ? '' : 's'} · ${num(c.letterboxes)} letterboxes (estimated)${tracks.length ? ' · blue lines show distributor GPS tracks' : ''}`} />

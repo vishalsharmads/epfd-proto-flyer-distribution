@@ -13,6 +13,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
     testDir: './tests/e2e',
+    testIgnore: ['**/qa-admin/**', '**/qa/**'],
     fullyParallel: false,
     workers: 1,
     retries: 1,

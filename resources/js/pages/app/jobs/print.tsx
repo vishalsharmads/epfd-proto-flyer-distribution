@@ -46,7 +46,7 @@ export default function PrintJob({ order: o, invoice, thread, linked_campaign, t
                     {linked_campaign ? <>These flyers will be letterboxed in “{linked_campaign.name}”. {linked_campaign.status === 'draft' && 'Choose your areas to book the distribution.'}</> : 'Your linked distribution campaign is being created.'}
                 </Alert>
             )}
-            <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="space-y-6">
                     <Card>
                         <CardHeader title="Order details" />
