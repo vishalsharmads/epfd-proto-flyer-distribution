@@ -51,5 +51,7 @@ export interface MapProvider {
     on(event: 'click', cb: (e: MapClick) => void): () => void;
     on(event: Exclude<MapEvent, 'click'>, cb: () => void): () => void;
     resize(): void;
+    /** The underlying engine map (maplibregl.Map or google.maps.Map), for drawing libraries such as Terra Draw. */
+    native(): unknown;
     destroy(): void;
 }

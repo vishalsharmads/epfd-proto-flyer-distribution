@@ -87,7 +87,12 @@ final class GnafImporter
             $this->dropAddressIndexes();
             $skipped = [];
             foreach ($states as $state) {
+                $this->log("  {$state}: transforming into addresses…");
                 $skipped[$state] = $this->transform($d, $state);
+                // Fresh rows have no planner statistics; without this the primary-flagging UPDATE can pick
+                // a nested loop over millions of rows and run for hours.
+                DB::statement('ANALYZE addresses');
+                $this->log("  {$state}: flagging unit-building primaries…");
                 $this->flagPrimaries($d, $state);
             }
             $this->createAddressIndexes();

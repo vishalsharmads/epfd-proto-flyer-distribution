@@ -152,6 +152,10 @@ export class GoogleProvider implements MapProvider {
             l?.remove();
         };
     }
+    native(): unknown {
+        return this.map;
+    }
+
     resize() {
         /* Google maps resize automatically with their container. */
     }

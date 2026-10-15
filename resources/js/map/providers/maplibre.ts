@@ -148,6 +148,10 @@ export class MapLibreProvider implements MapProvider {
         this.map.on(event as 'move', h);
         return () => this.map.off(event as 'move', h);
     }
+    native(): unknown {
+        return this.map;
+    }
+
     resize() {
         this.map.resize();
     }

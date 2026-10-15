@@ -36,3 +36,5 @@ Importing NSW, VIC — release "AUG 2026", CRS GDA2020 (EPSG:7844)
  VIC ADDRESS_SITE 4,411,310 rows 2.6s
  VIC PRIMARY_SECONDARY 1,280,861 rows 1.9s
  NSW addresses 4,923,145 rows (301,195 aliases, 0 retired, 0 without geocode skipped) 179.5s
+make: *** [gnaf] Terminated: 15
+make gnaf  0.79s user 0.65s system 0% cpu 4:13:40.99 total

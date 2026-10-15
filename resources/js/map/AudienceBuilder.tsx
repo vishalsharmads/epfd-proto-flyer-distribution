@@ -15,6 +15,7 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddressLayer, type AddressStatus } from './draw/AddressLayer';
 import { DrawOverlay, type OverlayArea, type Phase } from './draw/DrawOverlay';
+import { TerraDrawLayer } from './draw/TerraDrawLayer';
 import { geodesicCircle } from './geometry/circle';
 import { bounds, fromPolygon, pointInPolygon, toPolygon } from './geometry/polygon';
 import { requestEstimate, useLiveEstimate, type EstimateOptions } from './hooks/estimate';
@@ -81,9 +82,12 @@ export default function AudienceBuilder({
     readOnly = false,
     tracks,
     className,
+    engine,
+    drawEngine = 'overlay',
 }: AudienceBuilderProps) {
     const { map: cfg } = usePage<SharedProps>().props;
     const admin = mode === 'admin';
+    const terra = drawEngine === 'terra' && !readOnly;
     const radiusKm = cfg.pickup_radius_km ?? 20;
 
     const rootRef = useRef<HTMLDivElement>(null);
@@ -119,7 +123,7 @@ export default function AudienceBuilder({
         let instance: MapProvider | null = null;
         const allPts = [...initialAreas.flatMap((a) => fromPolygon(a.geometry)), ...(tracks ?? []).flatMap((t) => t.points)];
         const center: LngLat = pickup ? [pickup.lng, pickup.lat] : allPts.length ? (bounds(allPts).slice(0, 2) as LngLat) : [151.0, -33.85];
-        createProvider(cfg.provider, { container: el, center, zoom: 14, config: cfg, dark: document.documentElement.classList.contains('dark') })
+        createProvider(engine ?? cfg.provider, { container: el, center, zoom: 14, config: cfg, dark: document.documentElement.classList.contains('dark') })
             .then(async (p) => {
                 instance = p;
                 if (disposed) return p.destroy();
@@ -302,6 +306,7 @@ export default function AudienceBuilder({
     /* ---------------- map clicks ---------------- */
     const clickRef = useRef<(ll: LngLat) => void>(() => undefined);
     clickRef.current = (ll) => {
+        if (terra && edit) return;
         if (edit?.phase === 'drawing') {
             if (edit.points.length >= 150) return;
             setPoints([...edit.points, ll]);
@@ -379,12 +384,14 @@ export default function AudienceBuilder({
             return 'Click the first pin or press Enter to close the area · Backspace removes the last pin';
         }
         if (edit.phase === 'tracing') return 'Press and drag to trace your area';
+        if (terra && edit.phase === 'editing') return 'Drag pins to reshape · drag + to add a pin · right-click a pin to remove it';
         if (edit.phase === 'suburb') return 'Search for a suburb in the panel';
         return null;
     })();
     const addrHint = rail.addresses && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
 
     const summary: Summary = { ...totals, per_item_cents: totals.fee_cents != null && totals.letterboxes ? totals.fee_cents / totals.letterboxes : null };
+    const editIndex = edit ? areas.findIndex((a) => a.key === edit.key) : -1;
     const modeInfo = DRAW_MODES.find((m) => m.mode === (edit?.mode ?? lastMode))!;
 
     const footer = (
@@ -412,8 +419,8 @@ export default function AudienceBuilder({
                     provider={provider}
                     areas={overlayAreas}
                     editingKey={edit?.key ?? null}
-                    phase={edit?.phase ?? null}
-                    points={edit?.points ?? []}
+                    phase={terra ? null : (edit?.phase ?? null)}
+                    points={terra ? [] : (edit?.points ?? [])}
                     pickup={pickup}
                     radiusRing={radiusRing}
                     radiusKm={radiusKm}
@@ -427,6 +434,16 @@ export default function AudienceBuilder({
                     onTraceComplete={(pts) => setEdit((e) => (e ? { ...e, points: pts, phase: 'editing' } : e))}
                     onSelectArea={startEdit}
                     onDeleteRequest={requestDelete}
+                />
+            )}
+            {provider && terra && (
+                <TerraDrawLayer
+                    provider={provider}
+                    phase={edit?.phase ?? null}
+                    points={edit?.points ?? []}
+                    color={areaColor(editIndex >= 0 ? editIndex : areas.length)}
+                    onPointsChange={setPoints}
+                    onComplete={(pts) => setEdit((e) => (e ? { ...e, points: pts, phase: 'editing' } : e))}
                 />
             )}
 

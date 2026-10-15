@@ -68,6 +68,10 @@ export interface AudienceBuilderProps {
     readOnly?: boolean;
     tracks?: GpsTrack[];
     className?: string;
+    /** Override the configured map engine (POC / comparison pages). */
+    engine?: 'maplibre' | 'google';
+    /** 'overlay' (default): our SVG drawing. 'terra': Terra Draw inside the map engine (POC). */
+    drawEngine?: 'overlay' | 'terra';
 }
 
 export interface EstimateResponse {
