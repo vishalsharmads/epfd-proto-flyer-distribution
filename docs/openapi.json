@@ -11,7 +11,7 @@
         },
         "license": {
             "name": "G-NAF EULA (address data)",
-            "url": "https://data.gov.au/dataset/geocoded-national-address-file-g-naf"
+            "url": "https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf"
         }
     },
     "servers": [

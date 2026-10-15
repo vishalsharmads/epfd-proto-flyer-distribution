@@ -133,7 +133,7 @@ return [
 
     'licence' => [
         'gnaf_attribution' => 'Incorporates or developed using G-NAF © Geoscape Australia licensed by the Commonwealth of Australia under the Open Geo-coded National Address File (G-NAF) End User Licence Agreement.',
-        'gnaf_licence_url' => 'https://data.gov.au/dataset/geocoded-national-address-file-g-naf',
+        'gnaf_licence_url' => 'https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf',
         'gnaf_disclaimer' => 'Letterbox counts are estimates derived from G-NAF address points and may differ from what is physically present.',
     ],
 ];
