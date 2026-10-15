@@ -29,7 +29,7 @@ function businessUser(string $status = 'approved'): User
     return User::create([
         'name' => 'Tess Tester', 'email' => uniqid().'@user.test', 'password' => 'password',
         'business_id' => $business->id, 'email_verified_at' => now(),
-    ]);
+    ])->fresh();
 }
 
 function staffUser(string $role): User
@@ -37,5 +37,5 @@ function staffUser(string $role): User
     $u = User::create(['name' => ucfirst($role), 'email' => uniqid().'@staff.test', 'password' => 'password', 'email_verified_at' => now()]);
     $u->assignRole($role);
 
-    return $u;
+    return $u->fresh();
 }

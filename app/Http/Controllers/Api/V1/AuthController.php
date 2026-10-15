@@ -102,6 +102,9 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages(['email' => ['These credentials do not match our records.']]);
         }
+        if (data_get($user->preferences, 'deactivated_at')) {
+            throw ValidationException::withMessages(['email' => ['This account has been deactivated. Contact EPFD support.']]);
+        }
         $user->forceFill(['last_login_at' => now()])->save();
 
         return response()->json([

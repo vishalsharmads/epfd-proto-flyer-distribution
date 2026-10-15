@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -39,9 +39,13 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        Artisan::call('migrate:fresh', ['--force' => true]);
-        Artisan::call('gnaf:import', ['--sample' => true]);
-        Artisan::call('db:seed', ['--force' => true]);
+        // Run in a separate process: this test's DatabaseTransactions transaction is already open, and the
+        // importer's COPY uses a second connection (psql) that must see committed tables.
+        $env = ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'pgsql', 'DB_DATABASE' => (string) config('database.connections.pgsql.database'),
+            'CACHE_STORE' => 'array', 'MAIL_MAILER' => 'array', 'QUEUE_CONNECTION' => 'sync'];
+        foreach (['migrate:fresh --force', 'gnaf:import --sample', 'db:seed --force'] as $cmd) {
+            Process::timeout(600)->env($env)->path(base_path())->run('php artisan '.$cmd)->throw();
+        }
         DB::statement('CREATE TABLE IF NOT EXISTS test_fixture_state (fingerprint text)');
         DB::table('test_fixture_state')->delete();
         DB::table('test_fixture_state')->insert(['fingerprint' => $fingerprint]);
