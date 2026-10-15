@@ -30,8 +30,10 @@ class CatalogueSeeder extends Seeder
 
     public function run(): void
     {
-        RateCard::query()->update(['is_active' => false]);
-        RateCard::create(['name' => 'Standard rate card 2026', 'is_active' => true, 'data' => RateCardDefaults::data()]);
+        // Idempotent: only seed the default card when no rate card exists yet (admin edits create new versions).
+        if (! RateCard::query()->exists()) {
+            RateCard::create(['name' => 'Standard rate card 2026', 'is_active' => true, 'data' => RateCardDefaults::data()]);
+        }
 
         $products = [
             // slug, name, category, size, w, h, from $/pc, gsm, distributable material, sort
