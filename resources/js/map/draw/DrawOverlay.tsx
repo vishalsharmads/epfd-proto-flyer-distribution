@@ -215,6 +215,20 @@ export function DrawOverlay(p: Props) {
             {/* pickup marker + label */}
             {p.pickup && <PickupMarker at={proj([p.pickup.lng, p.pickup.lat])} label={p.pickup.label} admin={p.admin} radiusKm={p.radiusKm ?? 20} />}
 
+            {/* latest GPS position per track (pulsing; static with reduced motion) */}
+            {p.tracks?.map((t, i) => {
+                const last = t.points[t.points.length - 1];
+                if (!last) return null;
+                const q = proj(last);
+                const color = t.color ?? tokens.pickup;
+                return (
+                    <span key={`t${i}`} className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2" style={{ left: q.x, top: q.y }} data-testid="track-latest" aria-hidden>
+                        <span className="absolute inset-0 animate-ping rounded-full opacity-60 motion-reduce:animate-none" style={{ background: color }} />
+                        <span className="absolute inset-0 rounded-full border-2 border-white shadow-md" style={{ background: color }} />
+                    </span>
+                );
+            })}
+
             {/* address search marker */}
             {p.marker && (
                 <span className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-ink-900 shadow-md ring-4 ring-ink-900/15" style={{ left: proj(p.marker).x, top: proj(p.marker).y }} aria-hidden />

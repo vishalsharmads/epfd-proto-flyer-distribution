@@ -1,0 +1,62 @@
+addresses table: 9,110,258 rows. Target: 5,000 letterboxes in < 1000 ms (uncached).
++----------------+-------------+----------------+---------------+---------------+--------+
+| Probe | Letterboxes | Houses / Units | Est. distance | p50 / max | Result |
++----------------+-------------+----------------+---------------+---------------+--------+
+| Parramatta NSW | 5,456 | 431 / 5,025 | 25.27 km | 11 ms / 42 ms | PASS |
+| Rydalmere NSW | 5,806 | 2,255 / 3,551 | 75.25 km | 17 ms / 18 ms | PASS |
+| Bondi NSW | 5,713 | 791 / 4,922 | 24 km | 14 ms / 16 ms | PASS |
+| Penrith NSW | 5,014 | 978 / 4,036 | 40.44 km | 12 ms / 13 ms | PASS |
+| Richmond VIC | 5,054 | 2,499 / 2,555 | 42.4 km | 19 ms / 33 ms | PASS |
+| Werribee VIC | 5,006 | 2,790 / 2,216 | 96.9 km | 19 ms / 20 ms | PASS |
++----------------+-------------+----------------+---------------+---------------+--------+
+EXPLAIN (ANALYZE, BUFFERS) — counting query (Parramatta probe):
+ Subquery Scan on counts (cost=247418.35..247418.37 rows=1 width=24) (actual time=11.261..11.263 rows=1 loops=1)
+ Buffers: shared hit=3059
+ CTE z
+ -> Result (cost=0.00..0.01 rows=1 width=36) (actual time=0.000..0.000 rows=1 loops=1)
+ CTE sel
+ -> Nested Loop (cost=0.42..15074.79 rows=8631 width=52) (actual time=0.045..3.887 rows=5456 loops=1)
+ Buffers: shared hit=3059
+ -> CTE Scan on z (cost=0.00..0.02 rows=1 width=32) (actual time=0.001..0.001 rows=1 loops=1)
+ -> Index Scan using addresses_geom_gist on addresses a (cost=0.42..15066.14 rows=863 width=52) (actual time=0.044..3.627 rows=5456 loops=1)
+ Index Cond: (geom && z.g)
+ Filter: ((NOT is_commercial) AND (NOT is_primary_with_units) AND ((address_kind)::text = ANY ('{house,unit}'::text[])) AND st_intersects(geom, z.g))
+ Rows Removed by Filter: 537
+ Buffers: shared hit=3059
+ CTE dp
+ -> Unique (cost=114061.94..114126.67 rows=8631 width=126) (actual time=4.692..5.236 rows=468 loops=1)
+ InitPlan 3
+ -> CTE Scan on z z_1 (cost=0.00..0.02 rows=1 width=4) (actual time=0.000..0.000 rows=1 loops=1)
+ -> Sort (cost=114061.92..114083.49 rows=8631 width=126) (actual time=4.691..4.808 rows=5456 loops=1)
+ Sort Key: sel_1.street, (COALESCE((sel_1.num)::text, st_astext(sel_1.geom)))
+ Sort Method: quicksort Memory: 551kB
+ -> CTE Scan on sel sel_1 (cost=0.00..113497.65 rows=8631 width=126) (actual time=0.006..1.510 rows=5456 loops=1)
+ InitPlan 5
+ -> Aggregate (cost=108866.72..108866.73 rows=1 width=8) (actual time=5.798..5.799 rows=1 loops=1)
+ -> Subquery Scan on seg (cost=2.45..108859.53 rows=2877 width=8) (actual time=5.004..5.787 rows=414 loops=1)
+ Filter: (seg.d <= '400'::double precision)
+ Rows Removed by Filter: 54
+ -> WindowAgg (cost=2.45..108751.64 rows=8631 width=90) (actual time=5.002..5.767 rows=468 loops=1)
+ -> Incremental Sort (cost=2.36..583.63 rows=8631 width=114) (actual time=4.999..5.570 rows=468 loops=1)
+ Sort Key: dp.street, (COALESCE((dp.num % 2), 2)), dp.num, (st_x(dp.p)), (st_y(dp.p))
+ Presorted Key: dp.street
+ Full-sort Groups: 7 Sort Method: quicksort Average Memory: 30kB Peak Memory: 30kB
+ Pre-sorted Groups: 8 Sort Method: quicksort Average Memory: 38kB Peak Memory: 38kB
+ -> CTE Scan on dp (cost=0.00..237.35 rows=8631 width=114) (actual time=4.693..5.301 rows=468 loops=1)
+ InitPlan 6
+ -> Aggregate (cost=9091.22..9091.23 rows=1 width=8) (actual time=0.293..0.293 rows=1 loops=1)
+ -> WindowAgg (cost=4059.73..9088.72 rows=200 width=40) (actual time=0.282..0.292 rows=26 loops=1)
+ -> Sort (cost=4059.72..4060.22 rows=200 width=64) (actual time=0.281..0.281 rows=26 loops=1)
+ Sort Key: (st_geohash(st_transform(cent.c, 4326), 10))
+ Sort Method: quicksort Memory: 26kB
+ -> Subquery Scan on cent (cost=0.00..4052.07 rows=200 width=64) (actual time=0.082..0.253 rows=26 loops=1)
+ -> GroupAggregate (cost=0.00..1525.07 rows=200 width=90) (actual time=0.079..0.234 rows=26 loops=1)
+ Group Key: dp_1.street
+ -> CTE Scan on dp dp_1 (cost=0.00..172.62 rows=8631 width=90) (actual time=0.000..0.025 rows=468 loops=1)
+ -> Aggregate (cost=258.93..258.94 rows=1 width=16) (actual time=5.168..5.168 rows=1 loops=1)
+ Buffers: shared hit=3059
+ -> CTE Scan on sel (cost=0.00..172.62 rows=8631 width=24) (actual time=0.046..4.793 rows=5456 loops=1)
+ Buffers: shared hit=3059
+ Planning Time: 0.246 ms
+ Execution Time: 11.306 ms
+RESULT: PASS — worst case 42 ms < 1000 ms

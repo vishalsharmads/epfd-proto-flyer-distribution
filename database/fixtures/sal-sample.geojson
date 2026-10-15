@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "name": "sal-sample (hand-made fixture, NOT real ABS boundaries)",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::7844" } },
+  "features": [
+    { "type": "Feature", "properties": { "SAL_CODE21": "SAL13399", "SAL_NAME21": "Rydalmere", "STE_NAME21": "New South Wales" },
+      "geometry": { "type": "Polygon", "coordinates": [[[151.0180,-33.8200],[151.0450,-33.8200],[151.0450,-33.8040],[151.0180,-33.8040],[151.0180,-33.8200]]] } },
+    { "type": "Feature", "properties": { "SAL_CODE21": "SAL11450", "SAL_NAME21": "Ermington (NSW)", "STE_NAME21": "New South Wales" },
+      "geometry": { "type": "MultiPolygon", "coordinates": [[[[151.0450,-33.8250],[151.0700,-33.8250],[151.0700,-33.8050],[151.0450,-33.8050],[151.0450,-33.8250]]]] } },
+    { "type": "Feature", "properties": { "SAL_CODE21": "SAL99999", "SAL_NAME21": "Nowhereville", "STE_NAME21": "New South Wales" },
+      "geometry": { "type": "Polygon", "coordinates": [[[151.1,-33.9],[151.11,-33.9],[151.11,-33.89],[151.1,-33.89],[151.1,-33.9]]] } }
+  ]
+}

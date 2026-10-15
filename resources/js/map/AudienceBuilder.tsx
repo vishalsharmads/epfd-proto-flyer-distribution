@@ -117,7 +117,7 @@ export default function AudienceBuilder({
         if (!el) return;
         let disposed = false;
         let instance: MapProvider | null = null;
-        const allPts = initialAreas.flatMap((a) => fromPolygon(a.geometry));
+        const allPts = [...initialAreas.flatMap((a) => fromPolygon(a.geometry)), ...(tracks ?? []).flatMap((t) => t.points)];
         const center: LngLat = pickup ? [pickup.lng, pickup.lat] : allPts.length ? (bounds(allPts).slice(0, 2) as LngLat) : [151.0, -33.85];
         createProvider(cfg.provider, { container: el, center, zoom: 14, config: cfg, dark: document.documentElement.classList.contains('dark') })
             .then(async (p) => {
@@ -430,6 +430,26 @@ export default function AudienceBuilder({
                 />
             )}
 
+            {readOnly ? (
+                areas.length > 0 && (
+                    <ul className="pointer-events-auto absolute top-3 left-3 z-20 flex max-w-[calc(100%-5rem)] flex-col gap-1 rounded-[14px] border border-border bg-surface/95 p-2.5 text-xs shadow-md backdrop-blur" aria-label="Legend" data-testid="map-legend">
+                        {overlayAreas.map((a) => (
+                            <li key={a.key} className="flex items-center gap-2 text-fg">
+                                <span className="size-2.5 shrink-0 rounded-full" style={{ background: a.color }} aria-hidden />
+                                <span className="truncate font-medium">
+                                    {a.index + 1}. {a.name}
+                                </span>
+                                {a.estimate && <span className="ml-auto pl-2 text-muted tabular-nums">{num(a.estimate.total)}</span>}
+                            </li>
+                        ))}
+                        {!!tracks?.length && (
+                            <li className="mt-1 flex items-center gap-2 border-t border-border pt-1.5 text-muted">
+                                <span className="h-0.5 w-3 rounded bg-[var(--map-pickup)]" aria-hidden /> GPS track · latest position pulses
+                            </li>
+                        )}
+                    </ul>
+                )
+            ) : (
             <LeftPanel
                 areas={overlayAreas}
                 includeHouses={houses}
@@ -456,6 +476,7 @@ export default function AudienceBuilder({
                     </Popover>
                 }
             />
+            )}
 
             {/* right panel: editing card or totals */}
             <div className="pointer-events-none absolute top-3 right-16 left-3 z-20 flex max-h-[42%] flex-col md:top-4 md:right-[76px] md:left-auto md:max-h-[calc(100%-5rem)]">
@@ -504,7 +525,7 @@ export default function AudienceBuilder({
                             />
                         }
                     />
-                ) : areas.length > 0 ? (
+                ) : areas.length > 0 && !readOnly ? (
                     <SummaryCard s={summary} admin={admin} />
                 ) : null}
             </div>
@@ -512,6 +533,7 @@ export default function AudienceBuilder({
             <MapRail
                 className="pointer-events-auto absolute top-3 right-3 z-20 md:top-auto md:right-4 md:bottom-16"
                 state={rail}
+                minimal={readOnly}
                 onToggle={(k) => setRail((r) => ({ ...r, [k]: !r[k] }))}
                 onHelp={readOnly ? undefined : () => setTourOpen(true)}
                 radiusKm={radiusKm}
@@ -525,7 +547,7 @@ export default function AudienceBuilder({
 
             {/* hint pills */}
             <div className="pointer-events-none absolute inset-x-0 bottom-[calc(55%+12px)] z-10 flex flex-col items-center gap-2 px-4 md:bottom-16">
-                {hint && (
+                {hint && !readOnly && (
                     <p className="rounded-full bg-ink-900/90 px-4 py-2 text-center text-sm font-medium text-white shadow-lg backdrop-blur dark:bg-white/90 dark:text-ink-900" data-testid="draw-hint">
                         {hint}
                     </p>
@@ -545,7 +567,7 @@ export default function AudienceBuilder({
 
             <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-2 md:flex">{footer}</div>
 
-            <Tour open={tourOpen} onClose={() => setTourOpen(false)} root={rootRef.current} />
+            {!readOnly && <Tour open={tourOpen} onClose={() => setTourOpen(false)} root={rootRef.current} />}
 
             <Dialog open={!!confirmKey} onOpenChange={(o) => !o && setConfirmKey(null)}>
                 {confirmKey && (

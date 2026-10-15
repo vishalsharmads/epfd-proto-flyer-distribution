@@ -34,8 +34,13 @@ class LoginController extends Controller
             throw ValidationException::withMessages(['email' => 'These credentials do not match our records.']);
         }
 
-        $request->session()->regenerate();
         $user = $request->user();
+        if (data_get($user->preferences, 'deactivated_at')) {
+            Auth::guard('web')->logout();
+            throw ValidationException::withMessages(['email' => 'This account has been deactivated. Contact EPFD support.']);
+        }
+
+        $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
 
         if ($user->isStaff()) {

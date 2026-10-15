@@ -43,7 +43,7 @@ const RailButton = forwardRef<HTMLButtonElement, { label: string; pressed?: bool
 );
 RailButton.displayName = 'RailButton';
 
-export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, className }: { state: RailState; onToggle: (k: keyof RailState) => void; onHelp?: () => void; onRadius?: () => void; radiusKm?: number; onFound: (ll: LngLat, label: string) => void; className?: string }) {
+export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, minimal, className }: { minimal?: boolean; state: RailState; onToggle: (k: keyof RailState) => void; onHelp?: () => void; onRadius?: () => void; radiusKm?: number; onFound: (ll: LngLat, label: string) => void; className?: string }) {
     const [searchOpen, setSearchOpen] = useState(false);
     return (
         <nav aria-label="Map tools" className={cn('flex flex-col gap-2', className)}>
@@ -52,6 +52,7 @@ export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, 
                     <CircleHelp aria-hidden />
                 </RailButton>
             )}
+            {!minimal && (
             <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                 <PopoverTrigger asChild>
                     <RailButton label="Find an address" pressed={searchOpen} testId="rail-search">
@@ -84,14 +85,17 @@ export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, 
                     />
                 </PopoverContent>
             </Popover>
+            )}
             {onRadius && (
                 <RailButton label={`Show ${radiusKm ?? 20} km pickup radius`} onClick={onRadius} testId="rail-radius">
                     <CircleDashed aria-hidden />
                 </RailButton>
             )}
+            {!minimal && (
             <RailButton label={state.addresses ? 'Hide addresses' : 'Show addresses'} pressed={state.addresses} onClick={() => onToggle('addresses')} testId="rail-addresses">
                 <Dot aria-hidden className="scale-[2]" />
             </RailButton>
+            )}
             <RailButton label="Show labels" pressed={state.labels} onClick={() => onToggle('labels')} testId="rail-labels">
                 <Tag aria-hidden />
             </RailButton>

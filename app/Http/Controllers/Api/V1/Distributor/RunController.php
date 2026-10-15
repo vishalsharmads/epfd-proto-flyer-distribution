@@ -113,33 +113,10 @@ class RunController extends Controller
         return response()->json(['data' => [...RunResource::make(Run::withGeoJson()->findOrFail($model->id))->resolve($request), 'coverage' => $cov]]);
     }
 
-    /** @return array{letterboxes:int, covered:int, coverage_pct:float, gps_points:int} */
+    /** @return array{letterboxes:int, covered:int, coverage_pct:float|null, gps_points:int} */
     public static function coverage(int $runId): array
     {
-        $r = DB::selectOne('
-            WITH run AS (SELECT geom, epfd_mga_srid(geom) AS srid FROM runs WHERE id = :id),
-                 pts AS (SELECT geom, recorded_at FROM run_gps_points WHERE run_id = :id2),
-                 track AS (
-                    SELECT CASE WHEN count(*) >= 2 THEN ST_MakeLine(geom ORDER BY recorded_at) ELSE ST_Collect(geom) END AS g,
-                           count(*) AS n FROM pts),
-                 boxes AS (
-                    SELECT a.geom FROM addresses a, run
-                    WHERE ST_Intersects(a.geom, run.geom) AND NOT a.is_commercial AND NOT a.is_primary_with_units)
-            SELECT (SELECT count(*) FROM boxes) AS total,
-                   (SELECT n FROM track) AS n,
-                   (SELECT count(*) FROM boxes, track, run
-                     WHERE track.g IS NOT NULL
-                       AND ST_DWithin(ST_Transform(boxes.geom, run.srid), ST_Transform(track.g, run.srid), :r)) AS covered',
-            ['id' => $runId, 'id2' => $runId, 'r' => self::COVERAGE_RADIUS_M]);
-        $total = (int) ($r->total ?? 0);
-        $covered = (int) ($r->covered ?? 0);
-
-        return [
-            'letterboxes' => $total,
-            'covered' => $covered,
-            'coverage_pct' => $total > 0 ? round($covered / $total * 100, 2) : 0.0,
-            'gps_points' => (int) ($r->n ?? 0),
-        ];
+        return app(RunService::class)->coverageBreakdown(Run::findOrFail($runId));
     }
 
     private function ensureDistributor(Request $request): User

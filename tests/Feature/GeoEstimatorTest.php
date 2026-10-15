@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Areas\GnafLetterboxSource;
 use App\Domain\Areas\LetterboxEstimator;
 use App\Domain\Areas\PolygonValidator;
 use App\Exceptions\DomainProblem;
@@ -88,7 +89,7 @@ describe('LetterboxEstimator on the sample dataset', function () {
 
     it('meets the performance budget on the sample', function () {
         $t = microtime(true);
-        app(\App\Domain\Areas\GnafLetterboxSource::class)->estimate(rydalmerePolygon(), true, true);
+        app(GnafLetterboxSource::class)->estimate(rydalmerePolygon(), true, true);
         expect((microtime(true) - $t) * 1000)->toBeLessThan(1000);
     });
 });

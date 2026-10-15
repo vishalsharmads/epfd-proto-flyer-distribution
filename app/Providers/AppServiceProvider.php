@@ -13,18 +13,27 @@ use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\StripeGateway;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
+use App\Models\Address;
 use App\Models\Artwork;
 use App\Models\Business;
 use App\Models\Campaign;
 use App\Models\CampaignArea;
 use App\Models\ContentPage;
+use App\Models\CreditLedger;
+use App\Models\GnafRelease;
 use App\Models\Invoice;
+use App\Models\Message;
 use App\Models\Payment;
 use App\Models\PickupPoint;
+use App\Models\PrintOption;
 use App\Models\PrintOrder;
+use App\Models\PrintProduct;
 use App\Models\PromoCode;
 use App\Models\RateCard;
 use App\Models\Run;
+use App\Models\RunGpsPoint;
+use App\Models\SavedArea;
+use App\Models\SavedCard;
 use App\Models\Suburb;
 use App\Models\SupportThread;
 use App\Models\User;
@@ -72,6 +81,15 @@ class AppServiceProvider extends ServiceProvider
             'pickup_point' => PickupPoint::class,
             'content_page' => ContentPage::class,
             'campaign_area' => CampaignArea::class,
+            'print_product' => PrintProduct::class,
+            'print_option' => PrintOption::class,
+            'saved_card' => SavedCard::class,
+            'saved_area' => SavedArea::class,
+            'credit_ledger' => CreditLedger::class,
+            'message' => Message::class,
+            'gnaf_release' => GnafRelease::class,
+            'address' => Address::class,
+            'run_gps_point' => RunGpsPoint::class,
         ]);
 
         // Super admins bypass every permission check.

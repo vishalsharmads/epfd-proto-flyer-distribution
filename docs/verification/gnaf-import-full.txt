@@ -1,0 +1,71 @@
+Discovering G-NAF release in: /Users/ds/Projects/gnaf-data/G-NAF/G-NAF AUGUST 2026
+ Release folder : n/a
+ Standard PSVs : /Users/ds/Projects/gnaf-data/G-NAF/G-NAF AUGUST 2026/Standard
+ Authority codes: 16 files (LEVEL_TYPE_AUT, FLAT_TYPE_AUT, GEOCODE_RELIABILITY_AUT, STREET_SUFFIX_AUT, STREET_CLASS_AUT, LOCALITY_ALIAS_TYPE_AUT…)
+ Table SQL : not present
+ Documents : none
+ ADDRESS_DETAIL columns (35): ADDRESS_DETAIL_PID, DATE_CREATED, DATE_LAST_MODIFIED, DATE_RETIRED, BUILDING_NAME, LOT_NUMBER_PREFIX, LOT_NUMBER, LOT_NUMBER_SUFFIX, FLAT_TYPE_CODE, FLAT_NUMBER_PREFIX, FLAT_NUMBER, FLAT_NUMBER_SUFFIX, LEVEL_TYPE_CODE, LEVEL_NUMBER_PREFIX, LEVEL_NUMBER, LEVEL_NUMBER_SUFFIX, NUMBER_FIRST_PREFIX, NUMBER_FIRST, NUMBER_FIRST_SUFFIX, NUMBER_LAST_PREFIX, NUMBER_LAST, NUMBER_LAST_SUFFIX, STREET_LOCALITY_PID, LOCATION_DESCRIPTION, LOCALITY_PID, ALIAS_PRINCIPAL, POSTCODE, PRIVATE_STREET, LEGAL_PARCEL_ID, CONFIDENCE, ADDRESS_SITE_PID, LEVEL_GEOCODED_CODE, PROPERTY_PID, GNAF_PROPERTY_PID, PRIMARY_SECONDARY
++-------+------------+---------------------+-------------------+--------------+
+| State | PSV tables | ADDRESS_DETAIL size | PRIMARY_SECONDARY | ADDRESS_SITE |
++-------+------------+---------------------+-------------------+--------------+
+| ACT | 21 | 36.7 MB | yes | yes |
+| NSW | 21 | 653.5 MB | yes | yes |
+| NT | 21 | 15.3 MB | yes | yes |
+| OT | 21 | 0.6 MB | yes | yes |
+| QLD | 21 | 454.7 MB | yes | yes |
+| SA | 21 | 166.6 MB | yes | yes |
+| TAS | 21 | 45.5 MB | yes | yes |
+| VIC | 21 | 559.6 MB | yes | yes |
+| WA | 21 | 207.3 MB | yes | yes |
++-------+------------+---------------------+-------------------+--------------+
+
+Importing NSW, VIC — release "AUG 2026", CRS GDA2020 (EPSG:7844)
+ NSW STATE 1 rows 0.0s
+ NSW LOCALITY 4,760 rows 0.1s
+ NSW STREET_LOCALITY 190,168 rows 0.6s
+ NSW ADDRESS_DETAIL 5,224,340 rows 8.1s
+ NSW ADDRESS_DEFAULT_GEOCODE 5,224,340 rows 4.0s
+ NSW ADDRESS_SITE 5,224,340 rows 2.1s
+ NSW PRIMARY_SECONDARY 1,878,993 rows 1.5s
+ VIC STATE 1 rows 0.0s
+ VIC LOCALITY 2,996 rows 0.0s
+ VIC STREET_LOCALITY 207,435 rows 0.5s
+ VIC ADDRESS_DETAIL 4,411,310 rows 7.0s
+ VIC ADDRESS_DEFAULT_GEOCODE 4,411,310 rows 3.3s
+ VIC ADDRESS_SITE 4,411,310 rows 1.7s
+ VIC PRIMARY_SECONDARY 1,280,861 rows 1.1s
+ NSW addresses 4,923,145 rows (301,195 aliases, 0 retired, 0 without geocode skipped) 109.5s
+ NSW: 182079 primaries flagged via PRIMARY_SECONDARY
+ NSW: 0 primaries flagged via site/street-number grouping
+ VIC addresses 4,187,113 rows (224,197 aliases, 0 retired, 0 without geocode skipped) 105.7s
+ VIC: 171622 primaries flagged via PRIMARY_SECONDARY
+ VIC: 0 primaries flagged via site/street-number grouping
+Building indexes (GIST geom, btree state/locality/postcode, GIN trigram search) + ANALYZE…
+ done in 113.5s
+Building suburb boundaries (ST_ConcaveHull over address points)…
+ 7075 derived suburb boundaries
+
+Import #1 completed in 962.6 s
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+| State | Addresses | Houses | Units | Primary w/ units | Commercial | Letterboxes | Aliases skipped | Retired skipped | No geocode |
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+| NSW | 4,923,145 | 3,156,770 | 1,766,375 | 182,079 | 67,790 | 4,673,276 | 301,195 | 0 | 0 |
+| VIC | 4,187,113 | 2,995,860 | 1,191,253 | 171,622 | 57,867 | 3,957,624 | 224,197 | 0 | 0 |
++-------+-----------+-----------+-----------+------------------+------------+-------------+-----------------+-----------------+------------+
+House/unit split for known suburbs (estimated letterboxes, anti double-count applied):
++------------+-------+----------+--------+--------+--------------------+-------------+
+| Suburb | State | Boundary | Houses | Units | Primaries excluded | Letterboxes |
++------------+-------+----------+--------+--------+--------------------+-------------+
+| Abbotsford | NSW | derived | 952 | 1,801 | 192 | 2,753 |
+| Bondi | NSW | derived | 1,078 | 5,701 | 492 | 6,779 |
+| Ermington | NSW | derived | 3,709 | 2,290 | 168 | 5,999 |
+| Newcastle | NSW | derived | 657 | 5,212 | 328 | 5,869 |
+| Parramatta | NSW | derived | 2,292 | 21,027 | 819 | 23,319 |
+| Richmond | NSW | derived | 2,022 | 1,580 | 336 | 3,602 |
+| Rydalmere | NSW | derived | 2,220 | 1,718 | 135 | 3,938 |
+| Wollongong | NSW | derived | 2,656 | 14,161 | 1,262 | 16,817 |
+| Abbotsford | VIC | derived | 2,467 | 5,666 | 215 | 8,133 |
+| Fitzroy | VIC | derived | 3,289 | 5,771 | 504 | 9,060 |
+| Richmond | VIC | derived | 8,667 | 13,405 | 1,022 | 22,072 |
++------------+-------+----------+--------+--------+--------------------+-------------+
+DB_DATABASE=epfd_gnaf php artisan gnaf:import --states=NSW,VIC  1.59s user 1.35s system 0% cpu 16:02.88 total
