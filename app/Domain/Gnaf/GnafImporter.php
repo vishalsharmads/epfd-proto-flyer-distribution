@@ -206,9 +206,10 @@ final class GnafImporter
 
         $fullAddress = <<<'SQL'
             concat_ws(' ',
-              CASE WHEN ad.flat_number IS NOT NULL THEN coalesce(ad.flat_type_code || ' ', '') || coalesce(ad.flat_number_prefix,'') || ad.flat_number || coalesce(ad.flat_number_suffix,'') || '/' END
+              coalesce(CASE WHEN ad.flat_number IS NOT NULL THEN coalesce(ad.flat_number_prefix,'') || ad.flat_number || coalesce(ad.flat_number_suffix,'') || '/' END, '')
               || coalesce(ad.number_first_prefix,'') || coalesce(ad.number_first, ad.lot_number, '') || coalesce(ad.number_first_suffix,'')
               || CASE WHEN ad.number_last IS NOT NULL THEN '-' || ad.number_last ELSE '' END,
+              CASE WHEN ad.flat_number IS NULL AND ad.number_first IS NULL AND ad.lot_number IS NOT NULL THEN NULL END,
               sl.street_name, sl.street_type_code, sl.street_suffix_code) || ', ' || l.locality_name || ' ' || :state || ' ' || coalesce(ad.postcode,'')
         SQL;
         $fullAddress = str_replace(':state', $s, $fullAddress);
