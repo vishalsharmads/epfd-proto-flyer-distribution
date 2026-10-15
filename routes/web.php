@@ -24,6 +24,10 @@ Route::post('logout', [LoginController::class, 'destroy'])->middleware('auth')->
 if (file_exists(__DIR__.'/web/auth.php')) {
     require __DIR__.'/web/auth.php';
 }
+// Local preview pages (map builder sandbox) — not registered in production.
+if (! app()->isProduction() && file_exists(__DIR__.'/web/dev.php')) {
+    require __DIR__.'/web/dev.php';
+}
 // API docs (/docs, /docs/openapi.json): routes/web/docs.php
 if (file_exists(__DIR__.'/web/docs.php')) {
     require __DIR__.'/web/docs.php';

@@ -1,0 +1,70 @@
+# EPFD local stack: PostGIS, Mailpit, PHP app, queue worker, Vite.
+#   make up      → build + start + migrate
+#   make seed    → sample G-NAF import + demo data
+#   make gnaf    → full G-NAF import from GNAF_PATH (mounted read-only at /gnaf)
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: epfd
+      POSTGRES_USER: epfd
+      POSTGRES_PASSWORD: epfd
+    command: >
+      postgres -c shared_buffers=1GB -c work_mem=64MB -c maintenance_work_mem=1GB -c max_wal_size=8GB
+    ports: ["5433:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epfd -d epfd"]
+      interval: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ["8025:8025", "1025:1025"]
+
+  app:
+    build: { context: ., dockerfile: docker/app/Dockerfile }
+    env_file: .env
+    environment: &appenv
+      DB_HOST: postgis
+      DB_PORT: 5432
+      DB_DATABASE: epfd
+      DB_USERNAME: epfd
+      DB_PASSWORD: epfd
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      APP_URL: http://localhost:8000
+      GNAF_PATH: /gnaf
+      VITE_DEV_SERVER_URL: http://localhost:5173
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    ports: ["8000:8000"]
+    volumes:
+      - ./:/var/www/html
+      - ${GNAF_HOST_PATH:-./database/gnaf-sample}:/gnaf:ro
+    depends_on:
+      postgis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+
+  queue:
+    build: { context: ., dockerfile: docker/app/Dockerfile }
+    env_file: .env
+    environment: *appenv
+    command: php artisan queue:work --tries=3 --sleep=1
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      postgis: { condition: service_healthy }
+
+  vite:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci --legacy-peer-deps && npx vite --host 0.0.0.0 --port 5173"
+    ports: ["5173:5173"]
+    volumes:
+      - ./:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:
