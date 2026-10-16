@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/surface';
 import { cn, km, money, num, perItem } from '@/lib/utils';
 import type { LngLat } from '@/types';
-import { Building2, ChevronDown, House, Loader2, MapPinned, Minus, Pencil, Plus, Receipt, Shapes } from 'lucide-react';
+import { Building2, ChevronDown, House, Loader2, MapPinned, Minus, Pencil, Plus, Receipt, Scissors, Shapes } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { EstimateState } from '../hooks/estimate';
 
@@ -90,6 +90,8 @@ interface EditingProps {
     suburbSlot?: ReactNode;
     coords: LngLat[];
     onCoordsChange: (pts: LngLat[]) => void;
+    /** Set when the estimated walk is over the per-area limit: the area must be split before Done. */
+    overLimit?: { maxKm: number; onSplit: () => void; splitting: boolean } | null;
 }
 
 export function EditingPanel(p: EditingProps) {
@@ -180,6 +182,13 @@ export function EditingPanel(p: EditingProps) {
                                 }
                             >
                                 No letterboxes could be retrieved so fees are unavailable. Redraw to try again.
+                            </Alert>
+                        ) : p.overLimit && e ? (
+                            <Alert tone="warning" title={`${km(e.distance_km)} walk · over the ${km(p.overLimit.maxKm)} limit`} className="mb-3">
+                                <p>One distributor walks each area. Split it into smaller areas to continue.</p>
+                                <Button size="sm" className="mt-2" onClick={p.overLimit.onSplit} disabled={p.overLimit.splitting} data-testid="split-area">
+                                    {p.overLimit.splitting ? <Loader2 className="animate-spin" aria-hidden /> : <Scissors aria-hidden />} {p.overLimit.splitting ? 'Splitting…' : 'Split area'}
+                                </Button>
                             </Alert>
                         ) : null}
                         <div className="relative">

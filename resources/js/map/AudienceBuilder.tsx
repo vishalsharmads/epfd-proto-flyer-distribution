@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/overlay';
 import { GnafAttribution } from '@/components/brand';
 import { areaColor } from '@/lib/tokens';
-import { api, cn, money, num } from '@/lib/utils';
+import { api, cn, km, money, num } from '@/lib/utils';
 import type { GeoJsonPolygon, LngLat, SharedProps } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { ChevronDown, Loader2 } from 'lucide-react';
@@ -19,7 +19,7 @@ import { DrawOverlay, type OverlayArea, type Phase } from './draw/DrawOverlay';
 import { TerraDrawLayer } from './draw/TerraDrawLayer';
 import { geodesicCircle } from './geometry/circle';
 import { bounds, fromPolygon, pointInPolygon, toPolygon } from './geometry/polygon';
-import { requestEstimate, useLiveEstimate, type EstimateOptions } from './hooks/estimate';
+import { requestEstimate, requestSplit, useLiveEstimate, type EstimateOptions, type SplitPiece } from './hooks/estimate';
 import { isTypingTarget, storageGet, storageSet } from './hooks/useMapTick';
 import { Combobox } from './panels/Combobox';
 import { DRAW_MODES, DrawModeMenu } from './panels/DrawModeMenu';
@@ -106,6 +106,7 @@ export default function AudienceBuilder({
     const admin = mode === 'admin';
     const terra = drawEngine === 'terra' && !readOnly;
     const radiusKm = cfg.pickup_radius_km ?? 20;
+    const maxWalkKm = cfg.max_walk_km ?? 30;
 
     const rootRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<HTMLDivElement>(null);
@@ -125,6 +126,8 @@ export default function AudienceBuilder({
     const [confirmKey, setConfirmKey] = useState<string | null>(null);
     const [tourOpen, setTourOpen] = useState(false);
     const [announce, setAnnounce] = useState('');
+    const [splitting, setSplitting] = useState(false);
+    const [splitPreview, setSplitPreview] = useState<SplitPiece[] | null>(null);
 
     const opts: EstimateOptions = useMemo(() => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }), [houses, units, coverage, material, pickup]);
     /** "My areas" for the address menu: the selected area while editing, otherwise every saved area (none while drawing). */
@@ -270,7 +273,8 @@ export default function AudienceBuilder({
 
     const closePolygon = useCallback(() => setEdit((e) => (e && e.points.length >= 3 ? { ...e, phase: 'editing' } : e)), []);
 
-    const canDone = !!edit && edit.phase === 'editing' && edit.points.length >= 3 && !!est.data && !est.loading && !est.error && !est.data.estimate.no_letterboxes;
+    const overLimit = !!est.data && !est.error && est.data.estimate.distance_km > maxWalkKm;
+    const canDone = !!edit && edit.phase === 'editing' && edit.points.length >= 3 && !!est.data && !est.loading && !est.error && !est.data.estimate.no_letterboxes && !overLimit;
 
     const done = useCallback(() => {
         if (!edit || !canDone || !est.data) return;
@@ -289,6 +293,35 @@ export default function AudienceBuilder({
         setEdit(null);
         setAnnounce(`${area.name} saved.`);
     }, [edit, canDone, est.data, areas, admin]);
+
+    const split = async () => {
+        if (!edit) return;
+        setSplitting(true);
+        try {
+            const r = await requestSplit(toPolygon(edit.points), edit.name, opts);
+            if (r.pieces.length < 2) setAnnounce('This area could not be split further. Draw a smaller area instead.');
+            else setSplitPreview(r.pieces);
+        } catch {
+            setAnnounce('Could not split this area. Try again or draw smaller areas.');
+        } finally {
+            setSplitting(false);
+        }
+    };
+
+    /** Replace the area being edited with the split pieces, each saved with its own estimate. */
+    const applySplit = () => {
+        if (!edit || !splitPreview) return;
+        const pieces: Area[] = splitPreview.map((p) => ({ key: newKey(), name: p.name, draw_mode: edit.mode, suburb_id: null, approximate: false, geometry: p.geometry, estimate: p.estimate, quote: admin ? null : p.quote }));
+        setAreas((list) => {
+            const at = list.findIndex((a) => a.key === edit.key);
+            if (at < 0) return [...list, ...pieces];
+            return [...list.slice(0, at), ...pieces, ...list.slice(at + 1)];
+        });
+        setAnnounce(`${edit.name} split into ${pieces.length} areas.`);
+        setSplitPreview(null);
+        provider?.setInteractive(true);
+        setEdit(null);
+    };
 
     const deleteArea = (key: string) => {
         const a = areas.find((x) => x.key === key);
@@ -368,7 +401,7 @@ export default function AudienceBuilder({
     /* ---------------- keyboard ---------------- */
     const keyRef = useRef<(e: KeyboardEvent) => void>(() => undefined);
     keyRef.current = (e) => {
-        if (readOnly || tourOpen || confirmKey || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (readOnly || tourOpen || confirmKey || splitPreview || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
         const t = e.target as HTMLElement | null;
         const typing = isTypingTarget(t);
         const onControl = !!t && ['BUTTON', 'A'].includes(t.tagName) && t.dataset.testid !== 'add-area';
@@ -525,6 +558,7 @@ export default function AudienceBuilder({
                 onSelect={startEdit}
                 onDelete={(k) => setConfirmKey(k)}
                 totals={totals}
+                maxWalkKm={maxWalkKm}
                 footer={<div className="md:hidden">{footer}</div>}
                 addAreaSlot={
                     <Popover open={menuOpen} onOpenChange={setMenuOpen}>
@@ -557,6 +591,7 @@ export default function AudienceBuilder({
                         onRedraw={() => switchMode(edit.mode)}
                         coords={edit.points}
                         onCoordsChange={setPoints}
+                        overLimit={overLimit ? { maxKm: maxWalkKm, onSplit: split, splitting } : null}
                         drawModeSlot={
                             <Popover open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
                                 <PopoverTrigger asChild>
@@ -631,6 +666,35 @@ export default function AudienceBuilder({
             <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-7 md:flex">{footer}</div>
 
             {!readOnly && <Tour open={tourOpen} onClose={() => setTourOpen(false)} root={rootRef.current} />}
+
+            <Dialog open={!!splitPreview} onOpenChange={(o) => !o && setSplitPreview(null)}>
+                {splitPreview && (
+                    <DialogContent title={`Split into ${splitPreview.length} areas`} description={`Each area stays within the ${km(maxWalkKm)} walking limit. Letterboxes and fees are recalculated per area.`}>
+                        <ul className="mt-4 flex max-h-[50vh] flex-col divide-y divide-border overflow-y-auto" data-testid="split-preview">
+                            {splitPreview.map((p, i) => (
+                                <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                                    <span className="flex min-w-0 items-center gap-2 font-medium text-fg">
+                                        <span className="size-2.5 shrink-0 rounded-full" style={{ background: areaColor((editIndex >= 0 ? editIndex : areas.length) + i) }} aria-hidden />
+                                        <span className="truncate">{p.name}</span>
+                                    </span>
+                                    <span className="shrink-0 text-muted tabular-nums">
+                                        {num(p.estimate.total)} letterboxes · {km(p.estimate.distance_km)}
+                                        {!admin && p.quote ? ` · ${money(p.quote.total_cents)}` : ''}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <DialogClose asChild>
+                                <Button variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={applySplit} data-testid="apply-split" autoFocus>
+                                Split area
+                            </Button>
+                        </div>
+                    </DialogContent>
+                )}
+            </Dialog>
 
             <Dialog open={!!confirmKey} onOpenChange={(o) => !o && setConfirmKey(null)}>
                 {confirmKey && (

@@ -27,6 +27,27 @@ export async function requestEstimate(geometry: GeoJsonPolygon, o: EstimateOptio
     });
 }
 
+export interface SplitPiece {
+    name: string;
+    geometry: GeoJsonPolygon;
+    estimate: EstimateResponse['estimate'];
+    quote: EstimateResponse['quote'];
+}
+
+/** Split an over-limit area server-side (by suburb, then walking distance). */
+export async function requestSplit(geometry: GeoJsonPolygon, name: string, o: EstimateOptions): Promise<{ max_walk_km: number; pieces: SplitPiece[] }> {
+    return api('/api/v1/areas/split', {
+        json: {
+            geometry,
+            name,
+            include_houses: o.includeHouses,
+            include_units: o.includeUnits,
+            ...(o.coverage ? { coverage: o.coverage } : {}),
+            ...(o.material ? { material: o.material } : {}),
+        },
+    });
+}
+
 /** Client-side checks mirroring the server, so feedback is instant. Returns an error message or null. */
 export function validateRing(points: LngLat[], pickup: Pickup | null | undefined, radiusKm: number): string | null {
     if (points.length < 3) return null;

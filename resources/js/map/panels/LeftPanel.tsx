@@ -14,6 +14,8 @@ interface Props {
     busy: boolean;
     readOnly?: boolean;
     admin?: boolean;
+    /** Walking limit per area (Admin → Settings); areas over it are flagged. */
+    maxWalkKm?: number;
     addAreaSlot: ReactNode;
     onCancel: () => void;
     onSelect: (key: string) => void;
@@ -66,6 +68,11 @@ export function LeftPanel(p: Props) {
                                             {a.index + 1}. {a.name}
                                         </span>
                                         <span className="block text-xs text-muted">{a.estimate ? `${num(a.estimate.total)} letterboxes · ${km(a.estimate.distance_km)}` : 'Not estimated'}</span>
+                                        {a.estimate && p.maxWalkKm != null && a.estimate.distance_km > p.maxWalkKm && (
+                                            <span className="mt-0.5 block text-xs font-medium text-danger" data-testid="area-over-limit">
+                                                Over the {km(p.maxWalkKm)} walk limit · split it
+                                            </span>
+                                        )}
                                     </span>
                                 </button>
                                 {!p.readOnly && (
