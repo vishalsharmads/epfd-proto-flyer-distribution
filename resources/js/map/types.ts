@@ -70,7 +70,7 @@ export interface AudienceBuilderProps {
     className?: string;
     /** Override the configured map engine (POC / comparison pages). */
     engine?: 'maplibre' | 'google';
-    /** 'overlay' (default): our SVG drawing. 'terra': Terra Draw inside the map engine (POC). */
+    /** Override MAP_STACK's drawing engine. 'overlay': our SVG drawing. 'terra': Terra Draw inside the map engine. */
     drawEngine?: 'overlay' | 'terra';
 }
 

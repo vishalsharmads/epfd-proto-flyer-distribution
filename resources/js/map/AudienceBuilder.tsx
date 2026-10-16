@@ -86,9 +86,10 @@ export default function AudienceBuilder({
     tracks,
     className,
     engine,
-    drawEngine = 'overlay',
+    drawEngine: drawEngineProp,
 }: AudienceBuilderProps) {
     const { map: cfg } = usePage<SharedProps>().props;
+    const drawEngine = drawEngineProp ?? cfg.draw_engine ?? 'overlay';
     const admin = mode === 'admin';
     const terra = drawEngine === 'terra' && !readOnly;
     const radiusKm = cfg.pickup_radius_km ?? 20;

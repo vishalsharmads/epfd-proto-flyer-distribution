@@ -45,7 +45,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'brand' => config('epfd.brand'),
             'map' => [
-                'provider' => config('epfd.map.google_key') ? 'google' : 'maplibre',
+                ...$this->mapStack(),
                 'google_key' => config('epfd.map.google_key'),
                 'base_tile_url' => config('epfd.map.base_tile_url'),
                 'satellite_tile_url' => config('epfd.map.satellite_tile_url'),
@@ -64,5 +64,24 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
         ];
+    }
+
+    /**
+     * Resolve MAP_STACK into the map engine and drawing engine the front end uses.
+     *
+     * @return array{stack: string, provider: 'maplibre'|'google', draw_engine: 'overlay'|'terra'}
+     */
+    private function mapStack(): array
+    {
+        $stack = (string) config('epfd.map.stack', 'terra-google');
+        if ($stack === 'terra-google' && ! config('epfd.map.google_key')) {
+            $stack = 'terra-maplibre';
+        }
+
+        return match ($stack) {
+            'classic' => ['stack' => 'classic', 'provider' => 'maplibre', 'draw_engine' => 'overlay'],
+            'terra-maplibre' => ['stack' => 'terra-maplibre', 'provider' => 'maplibre', 'draw_engine' => 'terra'],
+            default => ['stack' => 'terra-google', 'provider' => 'google', 'draw_engine' => 'terra'],
+        };
     }
 }

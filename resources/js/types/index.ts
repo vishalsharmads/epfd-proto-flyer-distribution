@@ -31,7 +31,9 @@ export interface SharedProps extends PageProps {
         logo: string;
     };
     map: {
+        stack: 'classic' | 'terra-maplibre' | 'terra-google';
         provider: 'maplibre' | 'google';
+        draw_engine: 'overlay' | 'terra';
         google_key: string | null;
         base_tile_url: string;
         satellite_tile_url: string;

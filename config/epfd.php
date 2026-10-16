@@ -116,6 +116,13 @@ return [
     ],
 
     'map' => [
+        /*
+        | Map stack for every map in the app (MAP_STACK):
+        |   terra-google    Terra Draw on Google Maps (default; falls back to terra-maplibre without GOOGLE_MAPS_KEY)
+        |   terra-maplibre  Terra Draw on MapLibre + OSM tiles
+        |   classic         MapLibre + OSM with the original SVG drawing overlay
+        */
+        'stack' => env('MAP_STACK', 'terra-google'),
         'google_key' => env('GOOGLE_MAPS_KEY'),
         'satellite_tile_url' => env('MAP_SATELLITE_TILE_URL', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
         'base_tile_url' => env('MAP_BASE_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
