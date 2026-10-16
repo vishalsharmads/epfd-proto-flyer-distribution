@@ -115,10 +115,15 @@ export default function AudienceBuilder({
     const [announce, setAnnounce] = useState('');
 
     const opts: EstimateOptions = useMemo(() => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }), [houses, units, coverage, material, pickup]);
-    /** The selected (closed) area: addresses and streets are shown inside it only. */
-    const focus = edit?.phase === 'editing' && edit.points.length >= 3 ? edit.points : null;
+    /** Areas whose addresses and streets are shown: the selected area while editing, otherwise every saved area. */
+    const editingClosed = edit?.phase === 'editing' && edit.points.length >= 3;
     const est = useLiveEstimate(edit?.phase === 'editing' ? edit.points : null, opts, radiusKm);
 
+    const focus = useMemo<LngLat[][] | null>(() => {
+        if (editingClosed) return [edit!.points];
+        if (edit) return null;
+        return areas.length ? areas.map((a) => fromPolygon(a.geometry)) : null;
+    }, [editingClosed, edit, areas]);
     const overlayAreas: OverlayArea[] = useMemo(() => areas.map((a, index) => ({ ...a, index, color: areaColor(index) })), [areas]);
     const radiusRing = useMemo(() => (pickup && !readOnly ? geodesicCircle([pickup.lng, pickup.lat], radiusKm, 64) : null), [pickup, radiusKm, readOnly]);
 
@@ -436,7 +441,7 @@ export default function AudienceBuilder({
             )}
             {mapError && <p className="absolute inset-x-0 top-1/3 z-[1] text-center text-sm text-muted">The map could not be loaded. Refresh the page to try again.</p>}
 
-            {provider && focus && <AreaFocusMask provider={provider} points={focus} />}
+            {provider && focus && <AreaFocusMask provider={provider} areas={focus} />}
             {provider && (rail.addresses || focus) && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={focus} />}
             {provider && (
                 <DrawOverlay

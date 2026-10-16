@@ -5,17 +5,17 @@ import { useMapTick } from '../hooks/useMapTick';
 import type { MapProvider } from '../providers';
 
 /**
- * Fades the map outside the selected area so only its own streets read clearly.
- * A canvas between the base map and the address/drawing layers, filled everywhere except the polygon (even-odd).
+ * Fades the map outside the given areas so only their own streets read clearly.
+ * A canvas between the base map and the address/drawing layers: a full wash with each area cut out.
  * Works on every provider because it only needs `project`.
  */
-export function AreaFocusMask({ provider, points }: { provider: MapProvider; points: LngLat[] }) {
+export function AreaFocusMask({ provider, areas }: { provider: MapProvider; areas: LngLat[][] }) {
     const tick = useMapTick(provider);
     const canvas = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         const cv = canvas.current;
-        if (!cv || points.length < 3) return;
+        if (!cv) return;
         const dpr = window.devicePixelRatio || 1;
         const { width, height } = cv.getBoundingClientRect();
         if (cv.width !== Math.round(width * dpr)) cv.width = Math.round(width * dpr);
@@ -24,18 +24,26 @@ export function AreaFocusMask({ provider, points }: { provider: MapProvider; poi
         if (!ctx) return;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
-        ctx.beginPath();
-        ctx.rect(0, 0, width, height);
-        points.forEach((p, i) => {
-            const q = provider.project(p);
-            if (i === 0) ctx.moveTo(q.x, q.y);
-            else ctx.lineTo(q.x, q.y);
-        });
-        ctx.closePath();
+        ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = 0.82;
         ctx.fillStyle = token('--color-surface-2');
-        ctx.fill('evenodd');
-    }, [points, tick, provider]);
+        ctx.fillRect(0, 0, width, height);
+        // Cut every area out of the wash (overlapping areas stay clear, unlike an even-odd fill).
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.globalAlpha = 1;
+        for (const ring of areas) {
+            if (ring.length < 3) continue;
+            ctx.beginPath();
+            ring.forEach((p, i) => {
+                const q = provider.project(p);
+                if (i === 0) ctx.moveTo(q.x, q.y);
+                else ctx.lineTo(q.x, q.y);
+            });
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+    }, [areas, tick, provider]);
 
     return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[3] size-full" aria-hidden data-testid="area-focus-mask" />;
 }

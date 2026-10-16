@@ -25,23 +25,24 @@ export interface AddressStatus {
 
 /**
  * G-NAF address points drawn on a canvas: houses = dots, units = squares.
- * Without `clip`: the current viewport (zoom ≥ minZoom). With `clip` (the selected area): only addresses inside
- * that polygon, at any zoom, fetched by the area's own bbox so the whole area shows even when it is partly off screen.
+ * Without `clip`: the current viewport (zoom ≥ minZoom). With `clip` (the selected area, or all areas): only addresses
+ * inside those polygons. When they fit the API's bbox limit they are fetched whole at any zoom; otherwise per viewport.
  */
-export function AddressLayer({ provider, minZoom, onStatus, clip = null }: { provider: MapProvider; minZoom: number; onStatus: (s: AddressStatus) => void; clip?: LngLat[] | null }) {
+export function AddressLayer({ provider, minZoom, onStatus, clip = null }: { provider: MapProvider; minZoom: number; onStatus: (s: AddressStatus) => void; clip?: LngLat[][] | null }) {
     const tick = useMapTick(provider);
     const canvas = useRef<HTMLCanvasElement>(null);
     const [data, setData] = useState<Feature[]>([]);
     const statusRef = useRef(onStatus);
     statusRef.current = onStatus;
-    const clipKey = clip ? clip.map((p) => p.join(',')).join(';') : '';
+    const rings = clip?.filter((r) => r.length >= 3) ?? [];
+    const clipKey = rings.map((r) => r.map((p) => p.join(',')).join(';')).join('|');
 
     useEffect(() => {
         let ctrl: AbortController | null = null;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const load = () => {
             ctrl?.abort();
-            const area = clip && clip.length >= 3 ? bounds(clip) : null;
+            const area = rings.length ? bounds(rings.flat()) : null;
             const areaFits = !!area && area[2] - area[0] <= 0.049 && area[3] - area[1] <= 0.049;
             if (!areaFits && provider.getZoom() < minZoom) {
                 setData([]);
@@ -59,7 +60,7 @@ export function AddressLayer({ provider, minZoom, onStatus, clip = null }: { pro
             statusRef.current({ zoomedOut: false, loading: true, count: 0, capped: false, error: false });
             api<Collection>(`/api/v1/addresses/viewport?bbox=${[w, s, e, n].map((v) => v.toFixed(6)).join(',')}&kind=all`, { signal: c.signal })
                 .then((fc) => {
-                    const inside = clip && clip.length >= 3 ? fc.features.filter((f) => pointInPolygon(f.geometry.coordinates, clip)) : fc.features;
+                    const inside = rings.length ? fc.features.filter((f) => rings.some((r) => pointInPolygon(f.geometry.coordinates, r))) : fc.features;
                     setData(inside);
                     statusRef.current({ zoomedOut: false, loading: false, count: inside.length, capped: !!fc.capped, error: false });
                 })
@@ -73,7 +74,7 @@ export function AddressLayer({ provider, minZoom, onStatus, clip = null }: { pro
         };
         // A fitted area is fetched once per shape; otherwise follow the viewport.
         const off = provider.on('moveend', debounced);
-        if (clip) debounced();
+        if (rings.length) debounced();
         else load();
         return () => {
             off();
