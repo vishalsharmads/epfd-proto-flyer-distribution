@@ -179,6 +179,8 @@ test('audience step: rail buttons (help, find address, addresses + zoom hint, la
     await page.waitForTimeout(800);
     await setView(page, RYD, 14);
     await page.getByTestId('rail-addresses').click();
+    await page.getByTestId('addresses-all').click();
+    await page.keyboard.press('Escape');
     await expect(page.getByText('Zoom in to see addresses')).toBeVisible();
     await setView(page, RYD, 17);
     await expect(page.getByText('Zoom in to see addresses')).toHaveCount(0);

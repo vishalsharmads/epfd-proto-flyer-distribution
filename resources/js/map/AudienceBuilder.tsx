@@ -66,6 +66,18 @@ interface SuburbHit {
 }
 
 const MODE_KEY = 'epfd-map-draw-mode';
+const ADDRESS_PREFS_KEY = 'epfd-map-address-prefs';
+type AddressPrefs = Pick<RailState, 'addressesInAreas' | 'addressesAll' | 'fadeOutside'>;
+
+/** Address menu choices, remembered per browser. All off by default. */
+function loadAddressPrefs(): AddressPrefs {
+    const off: AddressPrefs = { addressesInAreas: false, addressesAll: false, fadeOutside: false };
+    try {
+        return { ...off, ...(JSON.parse(storageGet(ADDRESS_PREFS_KEY) ?? '{}') as Partial<AddressPrefs>) };
+    } catch {
+        return off;
+    }
+}
 const phaseFor = (m: DrawMode): Phase => (m === 'pins' ? 'drawing' : m === 'trace' ? 'tracing' : 'suburb');
 let seq = 0;
 const newKey = () => `area-${Date.now().toString(36)}-${seq++}`;
@@ -107,7 +119,7 @@ export default function AudienceBuilder({
     const [menuOpen, setMenuOpen] = useState(false);
     const [modeMenuOpen, setModeMenuOpen] = useState(false);
     const [lastMode, setLastMode] = useState<DrawMode>(() => (storageGet(MODE_KEY) as DrawMode | null) ?? 'pins');
-    const [rail, setRail] = useState<RailState>({ addresses: false, labels: true, streets: true, satellite: false });
+    const [rail, setRail] = useState<RailState>(() => ({ ...loadAddressPrefs(), labels: true, streets: true, satellite: false }));
     const [addr, setAddr] = useState<AddressStatus | null>(null);
     const [marker, setMarker] = useState<LngLat | null>(null);
     const [confirmKey, setConfirmKey] = useState<string | null>(null);
@@ -115,7 +127,7 @@ export default function AudienceBuilder({
     const [announce, setAnnounce] = useState('');
 
     const opts: EstimateOptions = useMemo(() => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }), [houses, units, coverage, material, pickup]);
-    /** Areas whose addresses and streets are shown: the selected area while editing, otherwise every saved area. */
+    /** "My areas" for the address menu: the selected area while editing, otherwise every saved area (none while drawing). */
     const editingClosed = edit?.phase === 'editing' && edit.points.length >= 3;
     const est = useLiveEstimate(edit?.phase === 'editing' ? edit.points : null, opts, radiusKm);
 
@@ -124,6 +136,11 @@ export default function AudienceBuilder({
         if (edit) return null;
         return areas.length ? areas.map((a) => fromPolygon(a.geometry)) : null;
     }, [editingClosed, edit, areas]);
+    /** "Whole map" wins over "In my areas" (it already includes them). */
+    const addressesShown = rail.addressesAll || (rail.addressesInAreas && !!focus);
+    useEffect(() => {
+        storageSet(ADDRESS_PREFS_KEY, JSON.stringify({ addressesInAreas: rail.addressesInAreas, addressesAll: rail.addressesAll, fadeOutside: rail.fadeOutside }));
+    }, [rail.addressesInAreas, rail.addressesAll, rail.fadeOutside]);
     const overlayAreas: OverlayArea[] = useMemo(() => areas.map((a, index) => ({ ...a, index, color: areaColor(index) })), [areas]);
     const radiusRing = useMemo(() => (pickup && !readOnly ? geodesicCircle([pickup.lng, pickup.lat], radiusKm, 64) : null), [pickup, radiusKm, readOnly]);
 
@@ -416,7 +433,7 @@ export default function AudienceBuilder({
         if (edit.phase === 'suburb') return 'Search for a suburb in the panel';
         return null;
     })();
-    const addrHint = (rail.addresses || focus) && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
+    const addrHint = addressesShown && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
 
     const summary: Summary = { ...totals, per_item_cents: totals.fee_cents != null && totals.letterboxes ? totals.fee_cents / totals.letterboxes : null };
     const editIndex = edit ? areas.findIndex((a) => a.key === edit.key) : -1;
@@ -441,8 +458,8 @@ export default function AudienceBuilder({
             )}
             {mapError && <p className="absolute inset-x-0 top-1/3 z-[1] text-center text-sm text-muted">The map could not be loaded. Refresh the page to try again.</p>}
 
-            {provider && focus && <AreaFocusMask provider={provider} areas={focus} />}
-            {provider && (rail.addresses || focus) && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={focus} />}
+            {provider && rail.fadeOutside && focus && <AreaFocusMask provider={provider} areas={focus} />}
+            {provider && addressesShown && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={rail.addressesAll ? null : focus} />}
             {provider && (
                 <DrawOverlay
                     provider={provider}
@@ -599,7 +616,7 @@ export default function AudienceBuilder({
                     </p>
                 )}
                 {addrHint && <p className="rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-fg shadow-md">{addrHint}</p>}
-                {(rail.addresses || focus) && addr && !addr.zoomedOut && (
+                {addressesShown && addr && !addr.zoomedOut && (
                     <p className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs text-fg shadow-md" aria-label="Address legend">
                         <span className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-[var(--map-house)]" aria-hidden /> House

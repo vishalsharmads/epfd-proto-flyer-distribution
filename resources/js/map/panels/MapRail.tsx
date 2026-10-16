@@ -1,3 +1,4 @@
+import { Switch } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger, Tooltip } from '@/components/ui/overlay';
 import { api, cn } from '@/lib/utils';
 import type { LngLat } from '@/types';
@@ -6,7 +7,12 @@ import { forwardRef, useState, type ReactNode } from 'react';
 import { Combobox } from './Combobox';
 
 export interface RailState {
-    addresses: boolean;
+    /** G-NAF houses/units inside the selected area (or all saved areas when none is selected). */
+    addressesInAreas: boolean;
+    /** G-NAF houses/units for the whole viewport (street-level zoom). Includes the areas. */
+    addressesAll: boolean;
+    /** Fade the map outside the areas so only their streets stand out. */
+    fadeOutside: boolean;
     labels: boolean;
     streets: boolean;
     satellite: boolean;
@@ -45,6 +51,8 @@ RailButton.displayName = 'RailButton';
 
 export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, minimal, className }: { minimal?: boolean; state: RailState; onToggle: (k: keyof RailState) => void; onHelp?: () => void; onRadius?: () => void; radiusKm?: number; onFound: (ll: LngLat, label: string) => void; className?: string }) {
     const [searchOpen, setSearchOpen] = useState(false);
+    const [addressesOpen, setAddressesOpen] = useState(false);
+    const addressesOn = state.addressesInAreas || state.addressesAll;
     return (
         <nav aria-label="Map tools" className={cn('flex flex-col gap-2', !minimal && 'max-md:grid max-md:grid-cols-2 max-md:[direction:rtl]', className)}>
             {onHelp && (
@@ -92,9 +100,22 @@ export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, 
                 </RailButton>
             )}
             {!minimal && (
-            <RailButton label={state.addresses ? 'Hide addresses' : 'Show addresses'} pressed={state.addresses} onClick={() => onToggle('addresses')} testId="rail-addresses">
-                <Dot aria-hidden className="scale-[2]" />
-            </RailButton>
+            <Popover open={addressesOpen} onOpenChange={setAddressesOpen}>
+                <PopoverTrigger asChild>
+                    <RailButton label="Addresses" pressed={addressesOn || addressesOpen} testId="rail-addresses">
+                        <Dot aria-hidden className="scale-[2]" />
+                    </RailButton>
+                </PopoverTrigger>
+                <PopoverContent side="left" align="start" className="w-[min(280px,calc(100vw-80px))] p-3" data-testid="addresses-menu">
+                    <p className="mb-2 text-sm font-semibold text-fg">Addresses</p>
+                    <div className="flex flex-col gap-3">
+                        <MenuSwitch id="addresses-in-areas" label="In my areas" hint="Houses and units inside the selected area, or all your areas" checked={state.addressesInAreas} onChange={() => onToggle('addressesInAreas')} />
+                        <MenuSwitch id="addresses-all" label="Whole map" hint="Every address on screen. Zoom in to street level." checked={state.addressesAll} onChange={() => onToggle('addressesAll')} />
+                        <div className="border-t border-border" />
+                        <MenuSwitch id="fade-outside" label="Fade outside my areas" hint="Dims the streets outside your areas" checked={state.fadeOutside} onChange={() => onToggle('fadeOutside')} />
+                    </div>
+                </PopoverContent>
+            </Popover>
             )}
             <RailButton label="Show labels" pressed={state.labels} onClick={() => onToggle('labels')} testId="rail-labels">
                 <Tag aria-hidden />
@@ -106,5 +127,17 @@ export function MapRail({ state, onToggle, onHelp, onFound, onRadius, radiusKm, 
                 <Globe aria-hidden />
             </RailButton>
         </nav>
+    );
+}
+
+function MenuSwitch({ id, label, hint, checked, onChange }: { id: string; label: string; hint: string; checked: boolean; onChange: () => void }) {
+    return (
+        <div className="flex items-start justify-between gap-3">
+            <label htmlFor={id} className="flex flex-col text-sm font-medium text-fg">
+                {label}
+                <span className="text-xs font-normal text-muted">{hint}</span>
+            </label>
+            <Switch id={id} checked={checked} onCheckedChange={onChange} data-testid={id} />
+        </div>
     );
 }
