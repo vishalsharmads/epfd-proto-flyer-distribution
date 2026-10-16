@@ -49,7 +49,7 @@ function Tab({ href, active, children }: { href: string; active?: boolean; child
 export default function MapEngines() {
     const { map: cfg } = usePage<SharedProps>().props;
     const [engine, setEngine] = useState<Engine>(cfg.google_key ? cfg.provider : 'maplibre');
-    const [drawEngine, setDrawEngine] = useState<DrawEngine>('terra');
+    const [drawEngine, setDrawEngine] = useState<DrawEngine>(cfg.draw_engine);
     const [state, setState] = useState<AudienceState | null>(null);
 
     return (
