@@ -76,6 +76,9 @@ class CampaignWizardController extends Controller
             return redirect()->route('app.jobs.campaign', $campaign);
         }
         $n = self::STEPS[$step];
+        if ($n > self::STEPS['audience'] && ($over = $this->campaigns->overWalkLimit($campaign))) {
+            return redirect()->route('app.campaigns.step', [$campaign, 'audience'])->with('error', $over);
+        }
         if ($campaign->step < $n) {
             $campaign->forceFill(['step' => $n])->saveQuietly();
         }

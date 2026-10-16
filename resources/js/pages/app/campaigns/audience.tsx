@@ -2,8 +2,9 @@ import { AudienceMap, type AudienceState } from '@/components/app/map';
 import type { CampaignT, DistributionOptions } from '@/components/app/types';
 import { CAMPAIGN_STEPS, WizardShell, type SaveState } from '@/components/app/wizard';
 import AppLayout from '@/layouts/app-layout';
-import { api, ApiError, debounce, money, num } from '@/lib/utils';
-import { router } from '@inertiajs/react';
+import { api, ApiError, debounce, km, money, num } from '@/lib/utils';
+import type { SharedProps } from '@/types';
+import { router, usePage } from '@inertiajs/react';
 import { AlertTriangle } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
@@ -51,6 +52,8 @@ export default function CampaignAudience({ campaign: initial }: { campaign: Camp
     };
 
     const hasLetterboxes = campaign.areas.length > 0 && campaign.letterboxes > 0 && campaign.areas.every((a) => a.total > 0);
+    const maxWalkKm = usePage<SharedProps>().props.map.max_walk_km;
+    const overLimit = campaign.areas.find((a) => a.distance_km > maxWalkKm);
     const next = async () => {
         await queue.current;
         router.visit(`/app/campaigns/${campaign.id}/details`);
@@ -65,10 +68,14 @@ export default function CampaignAudience({ campaign: initial }: { campaign: Camp
                 onStep={(i) => i === 0 && router.visit('/app/campaigns/new')}
                 back={() => router.visit('/app/campaigns/new')}
                 next={next}
-                nextDisabled={!hasLetterboxes || save === 'saving'}
+                nextDisabled={!hasLetterboxes || !!overLimit || save === 'saving'}
                 saveState={save}
                 nextHint={
-                    campaign.letterboxes > 0 ? (
+                    overLimit ? (
+                        <span className="text-danger">
+                            {overLimit.name} is over the {km(maxWalkKm)} walk limit. Split it to continue.
+                        </span>
+                    ) : campaign.letterboxes > 0 ? (
                         <span className="tabular">
                             {num(campaign.letterboxes)} letterboxes (est.) · <strong className="text-fg">{money(campaign.total_cents)}</strong> incl. GST
                         </span>

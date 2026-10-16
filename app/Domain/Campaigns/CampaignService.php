@@ -170,6 +170,19 @@ final class CampaignService
     }
 
     /** Validation before payment: name, pickup, ≥1 area with letterboxes, T&Cs handled by caller. */
+    /**
+     * Message for the first area whose estimated walk is over the per-area limit (Admin → Settings), or null.
+     */
+    public function overWalkLimit(Campaign $campaign): ?string
+    {
+        $limit = (float) config('epfd.areas.max_walk_km');
+        $area = $campaign->areas()->where('distance_km', '>', $limit)->orderBy('position')->first(['name', 'distance_km']);
+
+        return $area
+            ? sprintf('%s is a %s km walk, over the %s km limit for one distributor. Split it on the Audience step.', $area->name, number_format((float) $area->distance_km, 1), rtrim(rtrim(number_format($limit, 1), '0'), '.'))
+            : null;
+    }
+
     public function assertReadyForPayment(Campaign $campaign): void
     {
         $errors = [];
@@ -177,6 +190,8 @@ final class CampaignService
             $errors['areas'] = ['Add at least one area.'];
         } elseif ($campaign->areas()->where(DB::raw('houses + units'), 0)->exists()) {
             $errors['areas'] = ['One of your areas has no letterboxes. Redraw it or delete it.'];
+        } elseif ($over = $this->overWalkLimit($campaign)) {
+            $errors['areas'] = [$over];
         }
         if ($campaign->letterboxes <= 0) {
             $errors['coverage'] = ['The selected coverage has no letterboxes in your areas.'];

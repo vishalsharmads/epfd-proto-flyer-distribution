@@ -9,6 +9,9 @@ use App\Support\Geo;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 
+// The Rydalmere test area is a ~30 km walk; the per-area walk limit has its own tests (WalkLimitTest).
+beforeEach(fn () => config(['epfd.areas.max_walk_km' => 100]));
+
 function webPay(array $overrides = []): array
 {
     return array_replace_recursive([

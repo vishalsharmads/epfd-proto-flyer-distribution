@@ -394,6 +394,10 @@ final class RunService
     {
         $r = $this->estimator->estimate($geometry, (bool) $campaign->include_houses, (bool) $campaign->include_units, null);
         $est = $r['estimate'];
+        $limit = (float) config('epfd.areas.max_walk_km');
+        if ($est->distanceKm > $limit) {
+            throw new DomainProblem('run_over_walk_limit', sprintf('%s is a %s km walk, over the %s km limit for one distributor. Split it into smaller runs.', $name, number_format($est->distanceKm, 1), rtrim(rtrim(number_format($limit, 1), '0'), '.')), 422);
+        }
         $flyers = $est->houses + $est->units;
         $run = new Run([
             'campaign_id' => $campaign->id,
