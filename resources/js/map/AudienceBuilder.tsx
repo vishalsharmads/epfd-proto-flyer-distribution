@@ -14,6 +14,7 @@ import { usePage } from '@inertiajs/react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddressLayer, type AddressStatus } from './draw/AddressLayer';
+import { AreaFocusMask } from './draw/AreaFocusMask';
 import { DrawOverlay, type OverlayArea, type Phase } from './draw/DrawOverlay';
 import { TerraDrawLayer } from './draw/TerraDrawLayer';
 import { geodesicCircle } from './geometry/circle';
@@ -114,6 +115,8 @@ export default function AudienceBuilder({
     const [announce, setAnnounce] = useState('');
 
     const opts: EstimateOptions = useMemo(() => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }), [houses, units, coverage, material, pickup]);
+    /** The selected (closed) area: addresses and streets are shown inside it only. */
+    const focus = edit?.phase === 'editing' && edit.points.length >= 3 ? edit.points : null;
     const est = useLiveEstimate(edit?.phase === 'editing' ? edit.points : null, opts, radiusKm);
 
     const overlayAreas: OverlayArea[] = useMemo(() => areas.map((a, index) => ({ ...a, index, color: areaColor(index) })), [areas]);
@@ -408,7 +411,7 @@ export default function AudienceBuilder({
         if (edit.phase === 'suburb') return 'Search for a suburb in the panel';
         return null;
     })();
-    const addrHint = rail.addresses && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
+    const addrHint = (rail.addresses || focus) && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
 
     const summary: Summary = { ...totals, per_item_cents: totals.fee_cents != null && totals.letterboxes ? totals.fee_cents / totals.letterboxes : null };
     const editIndex = edit ? areas.findIndex((a) => a.key === edit.key) : -1;
@@ -433,7 +436,8 @@ export default function AudienceBuilder({
             )}
             {mapError && <p className="absolute inset-x-0 top-1/3 z-[1] text-center text-sm text-muted">The map could not be loaded. Refresh the page to try again.</p>}
 
-            {provider && rail.addresses && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} />}
+            {provider && focus && <AreaFocusMask provider={provider} points={focus} />}
+            {provider && (rail.addresses || focus) && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={focus} />}
             {provider && (
                 <DrawOverlay
                     provider={provider}
@@ -590,7 +594,7 @@ export default function AudienceBuilder({
                     </p>
                 )}
                 {addrHint && <p className="rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-fg shadow-md">{addrHint}</p>}
-                {rail.addresses && addr && !addr.zoomedOut && (
+                {(rail.addresses || focus) && addr && !addr.zoomedOut && (
                     <p className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs text-fg shadow-md" aria-label="Address legend">
                         <span className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-[var(--map-house)]" aria-hidden /> House

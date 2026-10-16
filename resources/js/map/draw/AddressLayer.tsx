@@ -2,6 +2,7 @@ import { tokens } from '@/lib/tokens';
 import { api } from '@/lib/utils';
 import type { LngLat } from '@/types';
 import { useEffect, useRef, useState } from 'react';
+import { bounds, pointInPolygon } from '../geometry/polygon';
 import { useMapTick } from '../hooks/useMapTick';
 import type { MapProvider } from '../providers';
 
@@ -22,25 +23,32 @@ export interface AddressStatus {
     error: boolean;
 }
 
-/** G-NAF address points for the current viewport (zoom ≥ minZoom) drawn on a canvas: houses = dots, units = squares. */
-export function AddressLayer({ provider, minZoom, onStatus }: { provider: MapProvider; minZoom: number; onStatus: (s: AddressStatus) => void }) {
+/**
+ * G-NAF address points drawn on a canvas: houses = dots, units = squares.
+ * Without `clip`: the current viewport (zoom ≥ minZoom). With `clip` (the selected area): only addresses inside
+ * that polygon, at any zoom, fetched by the area's own bbox so the whole area shows even when it is partly off screen.
+ */
+export function AddressLayer({ provider, minZoom, onStatus, clip = null }: { provider: MapProvider; minZoom: number; onStatus: (s: AddressStatus) => void; clip?: LngLat[] | null }) {
     const tick = useMapTick(provider);
     const canvas = useRef<HTMLCanvasElement>(null);
     const [data, setData] = useState<Feature[]>([]);
     const statusRef = useRef(onStatus);
     statusRef.current = onStatus;
+    const clipKey = clip ? clip.map((p) => p.join(',')).join(';') : '';
 
     useEffect(() => {
         let ctrl: AbortController | null = null;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const load = () => {
             ctrl?.abort();
-            if (provider.getZoom() < minZoom) {
+            const area = clip && clip.length >= 3 ? bounds(clip) : null;
+            const areaFits = !!area && area[2] - area[0] <= 0.049 && area[3] - area[1] <= 0.049;
+            if (!areaFits && provider.getZoom() < minZoom) {
                 setData([]);
                 statusRef.current({ zoomedOut: true, loading: false, count: 0, capped: false, error: false });
                 return;
             }
-            let [w, s, e, n] = provider.getBounds();
+            let [w, s, e, n] = areaFits ? area! : provider.getBounds();
             // API rejects bboxes wider than 0.05°: clamp around the centre.
             const cx = (w + e) / 2,
                 cy = (s + n) / 2;
@@ -51,8 +59,9 @@ export function AddressLayer({ provider, minZoom, onStatus }: { provider: MapPro
             statusRef.current({ zoomedOut: false, loading: true, count: 0, capped: false, error: false });
             api<Collection>(`/api/v1/addresses/viewport?bbox=${[w, s, e, n].map((v) => v.toFixed(6)).join(',')}&kind=all`, { signal: c.signal })
                 .then((fc) => {
-                    setData(fc.features);
-                    statusRef.current({ zoomedOut: false, loading: false, count: fc.features.length, capped: !!fc.capped, error: false });
+                    const inside = clip && clip.length >= 3 ? fc.features.filter((f) => pointInPolygon(f.geometry.coordinates, clip)) : fc.features;
+                    setData(inside);
+                    statusRef.current({ zoomedOut: false, loading: false, count: inside.length, capped: !!fc.capped, error: false });
                 })
                 .catch(() => {
                     if (!c.signal.aborted) statusRef.current({ zoomedOut: false, loading: false, count: 0, capped: false, error: true });
@@ -62,14 +71,17 @@ export function AddressLayer({ provider, minZoom, onStatus }: { provider: MapPro
             clearTimeout(timer);
             timer = setTimeout(load, 250);
         };
+        // A fitted area is fetched once per shape; otherwise follow the viewport.
         const off = provider.on('moveend', debounced);
-        load();
+        if (clip) debounced();
+        else load();
         return () => {
             off();
             clearTimeout(timer);
             ctrl?.abort();
         };
-    }, [provider, minZoom]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [provider, minZoom, clipKey]);
 
     useEffect(() => {
         const cv = canvas.current;
