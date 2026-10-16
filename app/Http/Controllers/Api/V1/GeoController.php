@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Areas\AreaSplitter;
 use App\Domain\Areas\LetterboxEstimator;
 use App\Domain\Gnaf\AddressClassifier;
 use App\Domain\Pricing\PricingFactory;
@@ -163,6 +164,41 @@ class GeoController extends Controller
                 'geometry' => ['type' => 'Point', 'coordinates' => [(float) $r->lng, (float) $r->lat]],
                 'properties' => ['id' => $r->gnaf_pid, 'kind' => $r->address_kind, 'label' => $r->full_address],
             ], array_slice($rows, 0, $limit)),
+        ]);
+    }
+
+    /**
+     * Split an area whose walk is over the limit (Admin → Settings) into pieces one distributor can walk:
+     * by suburb, then by distance. Each piece comes back with its estimate and quote, ready to save.
+     */
+    public function split(Request $request, AreaSplitter $splitter, PricingService $pricing): JsonResponse
+    {
+        $data = $request->validate([
+            'geometry' => ['required', 'array'],
+            'geometry.type' => ['required', 'in:Polygon'],
+            'geometry.coordinates' => ['required', 'array'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'include_houses' => ['boolean'],
+            'include_units' => ['boolean'],
+            'coverage' => ['nullable', 'in:houses_units,houses_only,units_only'],
+            'material' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $pieces = $splitter->split($data['geometry'], (bool) ($data['include_houses'] ?? true), (bool) ($data['include_units'] ?? true), $data['name'] ?? 'Area');
+
+        return response()->json([
+            'max_walk_km' => (float) config('epfd.areas.max_walk_km'),
+            'pieces' => array_map(fn ($p) => [
+                'name' => $p['name'],
+                'geometry' => $p['geometry'],
+                'estimate' => $p['estimate']->toArray(),
+                'quote' => $p['estimate']->isEmpty() ? null : $pricing->distribution([
+                    'houses' => $p['estimate']->houses,
+                    'units' => $p['estimate']->units,
+                    'coverage' => $data['coverage'] ?? 'houses_units',
+                    'material' => $data['material'] ?? 'standard_dl',
+                ])->toArray(),
+            ], $pieces),
         ]);
     }
 

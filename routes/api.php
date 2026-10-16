@@ -21,6 +21,7 @@ Route::middleware('throttle:api')->group(function () {
     Route::get('addresses/search', [GeoController::class, 'addressSearch'])->name('api.addresses.search');
     Route::get('addresses/viewport', [GeoController::class, 'viewport'])->name('api.addresses.viewport');
     Route::post('areas/estimate', [GeoController::class, 'estimate'])->middleware('throttle:estimate')->name('api.areas.estimate');
+    Route::post('areas/split', [GeoController::class, 'split'])->middleware('throttle:estimate')->name('api.areas.split');
     Route::post('pricing/distribution/quote', [GeoController::class, 'distributionQuote'])->name('api.pricing.distribution');
     Route::post('pricing/print/quote', [GeoController::class, 'printQuote'])->name('api.pricing.print');
 
