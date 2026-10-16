@@ -21,7 +21,7 @@ class RolesSeeder extends Seeder
         'print_orders.view', 'print_orders.manage',
         'design_orders.view', 'design_orders.manage',
         'pickup_points.manage', 'service_areas.manage',
-        'rate_card.manage',
+        'rate_card.manage', 'settings.manage',
         'payments.view', 'payments.refund',
         'reports.view',
         'support.view', 'support.reply',

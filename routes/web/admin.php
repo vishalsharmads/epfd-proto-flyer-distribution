@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PrintOrderController;
 use App\Http\Controllers\Admin\RateCardController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ServiceAreaController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -152,4 +153,10 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     });
 
     Route::get('audit-log', AuditLogController::class)->middleware('permission:audit.view')->name('audit-log');
+
+    // App settings (maps, walking limit, estimator)
+    Route::middleware('permission:settings.manage')->group(function () {
+        Route::get('settings', [SettingsController::class, 'show'])->name('settings.show');
+        Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    });
 });

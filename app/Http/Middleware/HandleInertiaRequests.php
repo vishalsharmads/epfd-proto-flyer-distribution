@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                 'satellite_tile_url' => config('epfd.map.satellite_tile_url'),
                 'attribution' => config('epfd.map.attribution'),
                 'pickup_radius_km' => (int) config('epfd.areas.pickup_radius_km'),
+                'max_walk_km' => (float) config('epfd.areas.max_walk_km'),
                 'viewport_min_zoom' => (int) config('epfd.viewport.min_zoom'),
             ],
             'gnaf' => fn () => [

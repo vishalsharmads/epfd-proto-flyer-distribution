@@ -13,6 +13,7 @@ use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\StripeGateway;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
+use App\Domain\Settings\Settings;
 use App\Models\Address;
 use App\Models\Artwork;
 use App\Models\Business;
@@ -64,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Settings::apply();
         Model::shouldBeStrict(! $this->app->isProduction());
         Model::preventLazyLoading(false);
 

@@ -93,6 +93,10 @@ return [
     */
     'areas' => [
         'pickup_radius_km' => 20,
+        // Longest estimated walk for one area (one distributor). Over it, the area must be split. Admin → Settings.
+        'max_walk_km' => 30,
+        // Split pieces with fewer letterboxes are merged into a neighbour.
+        'split_min_letterboxes' => 50,
         'max_vertices' => 500,
         'max_area_km2' => 60,
         'min_area_m2' => 500,

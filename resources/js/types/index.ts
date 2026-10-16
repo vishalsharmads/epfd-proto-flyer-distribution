@@ -39,6 +39,8 @@ export interface SharedProps extends PageProps {
         satellite_tile_url: string;
         attribution: string;
         pickup_radius_km: number;
+        /** Longest estimated walk for one area (Admin → Settings). */
+        max_walk_km: number;
         viewport_min_zoom: number;
     };
     gnaf: { attribution: string; licence_url: string; disclaimer: string; release: string | null };

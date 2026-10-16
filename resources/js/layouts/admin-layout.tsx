@@ -26,6 +26,7 @@ import {
     Send,
     ShieldCheck,
     Warehouse,
+    Settings2,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
@@ -65,6 +66,7 @@ export const adminNav: { group: string; items: NavItem[] }[] = [
     {
         group: 'System',
         items: [
+            { href: '/admin/settings', label: 'Settings', icon: Settings2, permission: 'settings.manage' },
             { href: '/admin/gnaf', label: 'G-NAF data status', icon: Database, permission: 'gnaf.view' },
             { href: '/admin/users', label: 'Users & roles', icon: ShieldCheck, permission: 'users.manage' },
             { href: '/admin/audit-log', label: 'Audit log', icon: History, permission: 'audit.view' },
