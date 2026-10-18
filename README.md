@@ -14,11 +14,12 @@ Sydney · Melbourne · Wollongong · Newcastle — 0493 243 666 · Operations@ep
 2. [G-NAF import](#g-naf-import)
 3. [Architecture](#architecture)
 4. [Design Studio](#design-studio)
-5. [Assumptions](#assumptions)
-6. [Needs human input](#needs-human-input)
-7. [Licence and attribution](#licence-and-attribution)
-8. [Prototype vs production gap list](#prototype-vs-production-gap-list)
-9. [Verification log](#verification-log)
+5. [Catalogue (print products & design services)](#catalogue-print-products--design-services)
+6. [Assumptions](#assumptions)
+7. [Needs human input](#needs-human-input)
+8. [Licence and attribution](#licence-and-attribution)
+9. [Prototype vs production gap list](#prototype-vs-production-gap-list)
+10. [Verification log](#verification-log)
 
 ---
 
@@ -194,14 +195,33 @@ the included revisions by one) · Editable source files **$49** · Licensed stoc
    production follow-up.
 3. **Double-sided uplift** applies to services with a sides option (flyer, business card); brochures, folders and
    stationery are multi-panel by nature and priced per design.
-4. **"Print this design"** uses the order's chosen print product, else a default per type (flyer → A5 flyers, brochure →
-   A4 folded brochures, business card/stationery → business cards). Presentation folders have no online print
+4. **"Print this design"** uses the order's chosen print product, else the service's *default print product* (set per
+   service in Rate card → Design; defaults: flyer → A5 flyers, brochure → A4 folded brochures, business card/stationery →
+   business cards). Presentation folders have no online print
    product, so the business is asked to message us. Front artwork = the first print-ready final file (PDF/PNG/JPG),
    else the latest proof; a second final file becomes the back when the design is double-sided.
 5. **SVG uploads** are accepted for briefs but always served as downloads (never inline) with a locked-down CSP.
 6. **Designers** are any staff user (no separate designer role yet).
 
 ---
+
+## Catalogue (print products & design services)
+
+Both catalogues are managed in the admin, with no code changes:
+
+| What | Where | Notes |
+|---|---|---|
+| Print products | Admin → Catalogue → **Print products** (`catalogue.manage`: Operations, Finance) | Add/edit/hide/delete products: name, category, description, image (public disk), size and bleed, paper weights, finishes per weight (from the rate card's print finishes), sides offered, quantities, turnaround, distributable + distribution material. Ordered products can only be hidden, never deleted. |
+| Print categories | Same page, *Categories* card | Name, icon, order, visible. Hidden categories hide their products. Only empty categories can be deleted. |
+| Print prices | Admin → Rate card → **Print price matrix** (`rate_card.manage`) | One cell per paper weight × sides × quantity. Adding options creates **unpriced** cells; a product cannot go on sale until every cell has a price, and unpriced cells are never sold. The customer "from" price is the cheapest cell. |
+| Design services & packages | Admin → Rate card → **Design** | Add/remove services and packages (versioned with the rate card). Per service: name, icon, description, sides option, a price for every package, **linked print categories** ("Get it designed" from those products opens this service; their sizes are offered as print sizes) and **default print product**. Removing a service stops new orders; existing orders keep a readable name. |
+
+`App\Domain\Catalogue\PrintCatalogue` keeps the price matrix in step with product options;
+`DesignService::typeKeys()/packageKeys()/typeForCategory()` read the active rate card. `CatalogueSeeder` only creates
+missing categories/products, so re-seeding never overwrites admin edits.
+
+**Deploying:** run `php artisan migrate` (creates categories from existing products and grants `catalogue.manage`) and
+`php artisan storage:link` once, so product images are served from `/storage`.
 
 ## Assumptions
 

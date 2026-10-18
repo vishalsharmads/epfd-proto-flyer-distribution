@@ -4,7 +4,7 @@
         "title": "EPFD API",
         "version": "1.0.0",
         "summary": "Easy Peasy Flyer Distribution — REST API v1",
-        "description": "REST API for **Easy Peasy Flyer Distribution** — letterbox distribution campaigns, print orders, payments,\nsupport and back-office operations. Base URL: `/api/v1`. All bodies are JSON (`Accept: application/json`)\nexcept artwork upload (`multipart/form-data`).\n\n## Authentication\n* **Bearer token** — `POST /auth/login` with `email`, `password`, `device_name` returns `{token, user}`.\n  Send `Authorization: Bearer <token>`. `POST /auth/logout` revokes the current token.\n* **Session cookie** — the EPFD web app calls the same endpoints with its first-party session cookie\n  (Laravel Sanctum stateful SPA auth; send `X-XSRF-TOKEN` on writes).\n* Admin endpoints (`/admin/*`) require a staff role (super_admin, operations, finance, support) **and** the\n  permission shown as `x-permission` on each operation. Distributor endpoints require `is_distributor`.\n* Demo accounts (password `password`): `demo@business.test` (approved business), `admin@epfd.test`,\n  `ops@epfd.test`, `finance@epfd.test`, `support@epfd.test`.\n\n## Rate limits\n| Limiter | Limit | Applies to |\n|---|---|---|\n| `api` | 120 requests / minute per user (or IP) | every endpoint |\n| `estimate` | 240 / minute | `POST /areas/estimate`, `PUT /campaigns/{id}/areas`, `POST /business/areas` |\n| `auth` | 10 / minute per IP | register, login, password reset, OTP |\n| `payments` | 10 / minute | `POST …/pay` |\n\nExceeding a limit returns **429** `rate_limited` with a `Retry-After` header.\n\n## Pagination\nList endpoints accept `?page=` and `?per_page=` (default 20, **max 100**) and return Laravel's paginator\nenvelope: `data`, `links {first,last,prev,next}` and `meta {current_page, from, last_page, per_page, to, total}`.\n\n## Idempotency\n`POST /campaigns/{id}/pay` and `POST /print/orders/{id}/pay` accept an `Idempotency-Key` header. Retrying with the\nsame key returns the original payment instead of charging twice. Webhooks are de-duplicated by event id.\n\n## Money\nAll amounts are integer **cents in AUD**. Prices are shown ex GST with a separate GST (10%) line; `total_cents` is GST-inclusive.\n\n## Coordinates & CRS\nGeometries are GeoJSON with **[longitude, latitude]** order. Data is stored and queried in **GDA2020 (EPSG:7844)**.\nWGS84 lon/lat from browsers/GPS is accepted as GDA2020 — the ~1.8 m datum offset is negligible for letterbox\ncounting. Distances and areas are computed in the matching **MGA2020 zone (EPSG:7849–7856)**. Letterbox counts\nare always computed server-side; client counts are never trusted.\n\n## Errors <a id=\"errors\"></a>\nErrors use **RFC 9457** `application/problem+json`:\n\n```json\n{\"type\": \"/docs#errors-validation_failed\", \"title\": \"Validation failed\", \"status\": 422,\n \"detail\": \"The name field is required.\", \"instance\": \"/api/v1/campaigns\", \"code\": \"validation_failed\",\n \"errors\": {\"name\": [\"The name field is required.\"]}}\n```\n\n`code` is stable and machine-readable:\n\n| Code | HTTP | Meaning |\n|---|---|---|\n| `validation_failed` | 422 | The request body failed validation. See `errors`. |\n| `unauthenticated` | 401 | Missing or invalid Bearer token / session. |\n| `forbidden` | 403 | Authenticated but not allowed (role, ownership or business status). |\n| `not_found` | 404 | Resource does not exist or is not visible to you. |\n| `rate_limited` | 429 | Too many requests. Retry after the `Retry-After` header. |\n| `conflict` | 409 | State conflict, e.g. paying an already-paid campaign. |\n| `business_not_approved` | 403 | The business is pending approval or suspended; payment is blocked. |\n| `polygon_invalid_geojson` | 422 | Area is not a GeoJSON Polygon of [lon, lat] pairs. |\n| `polygon_too_few_vertices` | 422 | Fewer than 3 distinct vertices. |\n| `polygon_too_many_vertices` | 422 | More than the maximum vertices (500). |\n| `polygon_self_intersection` | 422 | Edges cross each other. |\n| `polygon_invalid` | 422 | Geometry invalid for another reason (see `reason`). |\n| `polygon_has_holes` | 422 | Polygons with interior rings are not accepted. |\n| `polygon_outside_australia` | 422 | A vertex lies outside Australia. |\n| `polygon_too_small` | 422 | Area below the minimum size. |\n| `polygon_too_large` | 422 | Area above the maximum size (60 km²). |\n| `area_outside_pickup_radius` | 422 | Area is not even partly within 20 km of the pickup point. |\n| `no_letterboxes` | 422 | The area contains no letterboxes; fees are unavailable. |\n| `pricing_unavailable_combination` | 422 | Print product option combination is not offered. |\n| `promo_invalid` | 422 | Promo code unknown, expired or not applicable. |\n| `payment_declined` | 402 | The card was declined by the payment gateway. |\n| `letterbox_source_unavailable` | 503 | The configured letterbox data source is unavailable. |\n| `invalid_state` | 409 | The resource is not in a state that allows this action (e.g. run status transition). |\n| `pricing_unknown_addon` | 422 | Unknown print or design add-on code. |\n| `pricing_unknown_design_type` | 422 | Unknown design type (flyer, brochure, business_card, presentation_folder, stationery). |\n| `pricing_unknown_package` | 422 | Unknown design package (basic, standard, premium). |\n| `webhook_signature_invalid` | 400 | Webhook signature missing or invalid. |\n| `refund_failed` | 502 | The payment gateway rejected the refund. |\n| `server_error` | 500 | Unexpected error. The `instance` id is logged. |\n\n## Test payments (mock gateway)\nCard `4242 4242 4242 4242` succeeds; `4000 0000 0000 0002` is declined (**402** `payment_declined`). Any future expiry / CVC.\n\n## Address data licence\nIncorporates or developed using G-NAF © Geoscape Australia licensed by the Commonwealth of Australia under the Open Geo-coded National Address File (G-NAF) End User Licence Agreement.\n\nLetterbox counts are estimates derived from G-NAF address points and may differ from what is physically present. Licence: https://data.gov.au/dataset/geocoded-national-address-file-g-naf",
+        "description": "REST API for **Easy Peasy Flyer Distribution** — letterbox distribution campaigns, print orders, payments,\nsupport and back-office operations. Base URL: `/api/v1`. All bodies are JSON (`Accept: application/json`)\nexcept artwork upload (`multipart/form-data`).\n\n## Authentication\n* **Bearer token** — `POST /auth/login` with `email`, `password`, `device_name` returns `{token, user}`.\n  Send `Authorization: Bearer <token>`. `POST /auth/logout` revokes the current token.\n* **Session cookie** — the EPFD web app calls the same endpoints with its first-party session cookie\n  (Laravel Sanctum stateful SPA auth; send `X-XSRF-TOKEN` on writes).\n* Admin endpoints (`/admin/*`) require a staff role (super_admin, operations, finance, support) **and** the\n  permission shown as `x-permission` on each operation. Distributor endpoints require `is_distributor`.\n* Demo accounts (password `password`): `demo@business.test` (approved business), `admin@epfd.test`,\n  `ops@epfd.test`, `finance@epfd.test`, `support@epfd.test`.\n\n## Rate limits\n| Limiter | Limit | Applies to |\n|---|---|---|\n| `api` | 120 requests / minute per user (or IP) | every endpoint |\n| `estimate` | 240 / minute | `POST /areas/estimate`, `PUT /campaigns/{id}/areas`, `POST /business/areas` |\n| `auth` | 10 / minute per IP | register, login, password reset, OTP |\n| `payments` | 10 / minute | `POST …/pay` |\n\nExceeding a limit returns **429** `rate_limited` with a `Retry-After` header.\n\n## Pagination\nList endpoints accept `?page=` and `?per_page=` (default 20, **max 100**) and return Laravel's paginator\nenvelope: `data`, `links {first,last,prev,next}` and `meta {current_page, from, last_page, per_page, to, total}`.\n\n## Idempotency\n`POST /campaigns/{id}/pay` and `POST /print/orders/{id}/pay` accept an `Idempotency-Key` header. Retrying with the\nsame key returns the original payment instead of charging twice. Webhooks are de-duplicated by event id.\n\n## Money\nAll amounts are integer **cents in AUD**. Prices are shown ex GST with a separate GST (10%) line; `total_cents` is GST-inclusive.\n\n## Coordinates & CRS\nGeometries are GeoJSON with **[longitude, latitude]** order. Data is stored and queried in **GDA2020 (EPSG:7844)**.\nWGS84 lon/lat from browsers/GPS is accepted as GDA2020 — the ~1.8 m datum offset is negligible for letterbox\ncounting. Distances and areas are computed in the matching **MGA2020 zone (EPSG:7849–7856)**. Letterbox counts\nare always computed server-side; client counts are never trusted.\n\n## Errors <a id=\"errors\"></a>\nErrors use **RFC 9457** `application/problem+json`:\n\n```json\n{\"type\": \"/docs#errors-validation_failed\", \"title\": \"Validation failed\", \"status\": 422,\n \"detail\": \"The name field is required.\", \"instance\": \"/api/v1/campaigns\", \"code\": \"validation_failed\",\n \"errors\": {\"name\": [\"The name field is required.\"]}}\n```\n\n`code` is stable and machine-readable:\n\n| Code | HTTP | Meaning |\n|---|---|---|\n| `validation_failed` | 422 | The request body failed validation. See `errors`. |\n| `unauthenticated` | 401 | Missing or invalid Bearer token / session. |\n| `forbidden` | 403 | Authenticated but not allowed (role, ownership or business status). |\n| `not_found` | 404 | Resource does not exist or is not visible to you. |\n| `rate_limited` | 429 | Too many requests. Retry after the `Retry-After` header. |\n| `conflict` | 409 | State conflict, e.g. paying an already-paid campaign. |\n| `business_not_approved` | 403 | The business is pending approval or suspended; payment is blocked. |\n| `polygon_invalid_geojson` | 422 | Area is not a GeoJSON Polygon of [lon, lat] pairs. |\n| `polygon_too_few_vertices` | 422 | Fewer than 3 distinct vertices. |\n| `polygon_too_many_vertices` | 422 | More than the maximum vertices (500). |\n| `polygon_self_intersection` | 422 | Edges cross each other. |\n| `polygon_invalid` | 422 | Geometry invalid for another reason (see `reason`). |\n| `polygon_has_holes` | 422 | Polygons with interior rings are not accepted. |\n| `polygon_outside_australia` | 422 | A vertex lies outside Australia. |\n| `polygon_too_small` | 422 | Area below the minimum size. |\n| `polygon_too_large` | 422 | Area above the maximum size (60 km²). |\n| `area_outside_pickup_radius` | 422 | Area is not even partly within 20 km of the pickup point. |\n| `no_letterboxes` | 422 | The area contains no letterboxes; fees are unavailable. |\n| `pricing_unavailable_combination` | 422 | Print product option combination is not offered. |\n| `promo_invalid` | 422 | Promo code unknown, expired or not applicable. |\n| `payment_declined` | 402 | The card was declined by the payment gateway. |\n| `letterbox_source_unavailable` | 503 | The configured letterbox data source is unavailable. |\n| `invalid_state` | 409 | The resource is not in a state that allows this action (e.g. run status transition). |\n| `pricing_unknown_addon` | 422 | Unknown print or design add-on code. |\n| `pricing_unknown_design_type` | 422 | Unknown design service. Valid keys are listed by GET /design/services (admin-managed). |\n| `pricing_unknown_package` | 422 | Unknown design package, or the service has no price for it. See GET /design/services. |\n| `webhook_signature_invalid` | 400 | Webhook signature missing or invalid. |\n| `refund_failed` | 502 | The payment gateway rejected the refund. |\n| `server_error` | 500 | Unexpected error. The `instance` id is logged. |\n\n## Test payments (mock gateway)\nCard `4242 4242 4242 4242` succeeds; `4000 0000 0000 0002` is declined (**402** `payment_declined`). Any future expiry / CVC.\n\n## Address data licence\nIncorporates or developed using G-NAF © Geoscape Australia licensed by the Commonwealth of Australia under the Open Geo-coded National Address File (G-NAF) End User Licence Agreement.\n\nLetterbox counts are estimates derived from G-NAF address points and may differ from what is physically present. Licence: https://data.gov.au/data/dataset/geocoded-national-address-file-g-naf",
         "contact": {
             "name": "EPFD Operations",
             "email": "Operations@epfd.com.au"
@@ -2697,14 +2697,7 @@
                                 "string",
                                 "null"
                             ],
-                            "enum": [
-                                "flyer",
-                                "brochure",
-                                "business_card",
-                                "presentation_folder",
-                                "stationery",
-                                null
-                            ]
+                            "maxLength": 40
                         }
                     },
                     {
@@ -7418,7 +7411,8 @@
                                             "boundary_source": "string",
                                             "is_serviced": true,
                                             "created_at": "2026-10-15T07:47:42+00:00",
-                                            "updated_at": "2026-10-15T07:47:42+00:00"
+                                            "updated_at": "2026-10-15T07:47:42+00:00",
+                                            "boundary_matched_by": "string"
                                         }
                                     ],
                                     "first_page_url": "string",
@@ -8587,6 +8581,184 @@
                 },
                 "x-permission": null,
                 "security": []
+            }
+        },
+        "/areas/split": {
+            "post": {
+                "operationId": "areas.split",
+                "summary": "Split an area whose walk is over the limit (Admin → Settings) into pieces one distributor can walk:",
+                "tags": [
+                    "Geo & estimates"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "geometry": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "Polygon"
+                                                ]
+                                            },
+                                            "coordinates": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                },
+                                                "minItems": 1
+                                            }
+                                        },
+                                        "required": [
+                                            "type",
+                                            "coordinates"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 120
+                                    },
+                                    "include_houses": {
+                                        "type": "boolean"
+                                    },
+                                    "include_units": {
+                                        "type": "boolean"
+                                    },
+                                    "coverage": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "enum": [
+                                            "houses_units",
+                                            "houses_only",
+                                            "units_only",
+                                            null
+                                        ]
+                                    },
+                                    "material": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 40
+                                    }
+                                },
+                                "required": [
+                                    "geometry"
+                                ]
+                            },
+                            "example": {
+                                "geometry": {
+                                    "type": "Polygon",
+                                    "coordinates": [
+                                        "string"
+                                    ]
+                                },
+                                "name": "Spring letterbox drop",
+                                "include_houses": true,
+                                "include_units": true,
+                                "coverage": "houses_units",
+                                "material": "string"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "max_walk_km": {
+                                            "type": "number"
+                                        },
+                                        "pieces": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "max_walk_km",
+                                        "pieces"
+                                    ]
+                                },
+                                "example": {
+                                    "max_walk_km": 12.5,
+                                    "pieces": [
+                                        "string"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid Bearer token / session.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                },
+                                "example": {
+                                    "type": "/docs#errors-unauthenticated",
+                                    "title": "Unauthenticated",
+                                    "status": 401,
+                                    "detail": "Authentication is required.",
+                                    "instance": "/api/v1/areas/split",
+                                    "code": "unauthenticated"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Edges cross each other.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                },
+                                "example": {
+                                    "type": "/docs#errors-polygon_self_intersection",
+                                    "title": "Validation failed",
+                                    "status": 422,
+                                    "detail": "Edges cross each other.",
+                                    "instance": "/api/v1/areas/split",
+                                    "code": "polygon_self_intersection"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Retry after the `Retry-After` header.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Problem"
+                                },
+                                "example": {
+                                    "type": "/docs#errors-rate_limited",
+                                    "title": "Too many requests",
+                                    "status": 429,
+                                    "detail": "Rate limit exceeded.",
+                                    "instance": "/api/v1/areas/split",
+                                    "code": "rate_limited"
+                                }
+                            }
+                        }
+                    }
+                },
+                "description": "by suburb, then by distance. Each piece comes back with its estimate and quote, ready to save",
+                "x-permission": null
             }
         },
         "/auth/login": {
@@ -15237,6 +15409,13 @@
                                                             "description": {
                                                                 "type": "string"
                                                             },
+                                                            "icon": {
+                                                                "type": "string"
+                                                            },
+                                                            "print_categories": {
+                                                                "type": "array",
+                                                                "items": {}
+                                                            },
                                                             "sides_option": {
                                                                 "type": "boolean"
                                                             },
@@ -15254,6 +15433,8 @@
                                                             "value",
                                                             "label",
                                                             "description",
+                                                            "icon",
+                                                            "print_categories",
                                                             "sides_option",
                                                             "prices",
                                                             "from_cents"
@@ -15357,6 +15538,10 @@
                                                 "value": "flyer",
                                                 "label": "Flyer design",
                                                 "description": "…",
+                                                "icon": "file-text",
+                                                "print_categories": [
+                                                    "flyer"
+                                                ],
                                                 "sides_option": true,
                                                 "prices": {
                                                     "basic": 9900,
@@ -15369,6 +15554,10 @@
                                                 "value": "brochure",
                                                 "label": "Brochure design",
                                                 "description": "…",
+                                                "icon": "file-text",
+                                                "print_categories": [
+                                                    "brochure"
+                                                ],
                                                 "sides_option": false,
                                                 "prices": {
                                                     "basic": 24900,
@@ -15381,6 +15570,10 @@
                                                 "value": "business_card",
                                                 "label": "Business card design",
                                                 "description": "…",
+                                                "icon": "file-text",
+                                                "print_categories": [
+                                                    "business_card"
+                                                ],
                                                 "sides_option": true,
                                                 "prices": {
                                                     "basic": 7900,
@@ -15393,6 +15586,10 @@
                                                 "value": "presentation_folder",
                                                 "label": "Presentation folder design",
                                                 "description": "…",
+                                                "icon": "file-text",
+                                                "print_categories": [
+                                                    "presentation_folder"
+                                                ],
                                                 "sides_option": false,
                                                 "prices": {
                                                     "basic": 29900,
@@ -15405,6 +15602,10 @@
                                                 "value": "stationery",
                                                 "label": "Stationery set design",
                                                 "description": "…",
+                                                "icon": "file-text",
+                                                "print_categories": [
+                                                    "stationery"
+                                                ],
                                                 "sides_option": false,
                                                 "prices": {
                                                     "basic": 19900,
@@ -17270,11 +17471,7 @@
                                             "string",
                                             "null"
                                         ],
-                                        "enum": [
-                                            "matt",
-                                            "gloss",
-                                            null
-                                        ]
+                                        "maxLength": 40
                                     },
                                     "sides": {
                                         "type": "integer",
@@ -17717,11 +17914,7 @@
                                             "string",
                                             "null"
                                         ],
-                                        "enum": [
-                                            "matt",
-                                            "gloss",
-                                            null
-                                        ]
+                                        "maxLength": 40
                                     },
                                     "sides": {
                                         "type": "integer",
@@ -18707,6 +18900,18 @@
                                                     "category": {
                                                         "type": "string"
                                                     },
+                                                    "category_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "image_url": {
+                                                        "type": "null"
+                                                    },
                                                     "size_label": {
                                                         "type": "string"
                                                     },
@@ -18734,6 +18939,9 @@
                                                     "slug",
                                                     "name",
                                                     "category",
+                                                    "category_name",
+                                                    "description",
+                                                    "image_url",
                                                     "size_label",
                                                     "width_mm",
                                                     "height_mm",
@@ -18756,6 +18964,9 @@
                                             "slug": "string",
                                             "name": "Spring letterbox drop",
                                             "category": "string",
+                                            "category_name": "string",
+                                            "description": "Example text",
+                                            "image_url": null,
                                             "size_label": "string",
                                             "width_mm": 1,
                                             "height_mm": 1,
@@ -18851,18 +19062,7 @@
                                                 },
                                                 "sides": {
                                                     "type": "array",
-                                                    "prefixItems": [
-                                                        {
-                                                            "type": "integer",
-                                                            "const": 1
-                                                        },
-                                                        {
-                                                            "type": "integer",
-                                                            "const": 2
-                                                        }
-                                                    ],
-                                                    "minItems": 2,
-                                                    "maxItems": 2
+                                                    "items": {}
                                                 },
                                                 "quantities": {
                                                     "type": "array",
@@ -18890,7 +19090,10 @@
                                                                 "type": "integer"
                                                             },
                                                             "unit_price_hc": {
-                                                                "type": "integer"
+                                                                "type": [
+                                                                    "integer",
+                                                                    "null"
+                                                                ]
                                                             }
                                                         },
                                                         "required": [
@@ -22971,6 +23174,12 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "boundary_matched_by": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -22982,7 +23191,8 @@
                     "boundary_source",
                     "is_serviced",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "boundary_matched_by"
                 ],
                 "title": "Suburb"
             },
@@ -23239,7 +23449,7 @@
         },
         {
             "name": "Design Studio",
-            "description": "Graphic design orders (flyer, brochure, business card, presentation folder, stationery): services and prices, drafts with a brief, reference uploads, payment, proof approval and change requests."
+            "description": "Graphic design orders: services and packages (admin-managed — list them with GET /design/services), drafts with a brief, reference uploads, payment, proof approval and change requests."
         },
         {
             "name": "Payments & invoices",
