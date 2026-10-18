@@ -15,6 +15,7 @@ interface Row {
     design_type: string;
     type_label: string;
     package: string;
+    package_label?: string;
     headline: string | null;
     total_cents: number;
     due_date: string | null;
@@ -37,9 +38,7 @@ export const DESIGN_STATUSES = [
     { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const TYPES = ['flyer', 'brochure', 'business_card', 'presentation_folder', 'stationery'].map((t) => ({ value: t, label: titleCase(t) }));
-
-export default function DesignOrdersIndex({ orders, filters, counts, designers }: { orders: Paginated<Row>; filters: { status: string | null; type: string | null; q: string | null; designer: string | null }; counts: Record<string, number>; designers: { id: number; name: string }[] }) {
+export default function DesignOrdersIndex({ orders, filters, counts, designers, types: TYPES = [] }: { orders: Paginated<Row>; filters: { status: string | null; type: string | null; q: string | null; designer: string | null }; counts: Record<string, number>; designers: { id: number; name: string }[]; types?: { value: string; label: string }[] }) {
     const busy = useNavigating();
     const filtered = !!(filters.q || filters.status || filters.type || filters.designer);
     return (
@@ -83,7 +82,7 @@ export default function DesignOrdersIndex({ orders, filters, counts, designers }
                                     </Td>
                                     <Td>{o.business?.name}</Td>
                                     <Td>
-                                        {o.type_label} <span className="text-muted">· {titleCase(o.package)}</span>
+                                        {o.type_label} <span className="text-muted">· {o.package_label ?? titleCase(o.package)}</span>
                                     </Td>
                                     <Td>{o.designer?.name ?? <span className="text-muted">Unassigned</span>}</Td>
                                     <Td className="tabular">

@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -56,8 +57,8 @@ class DesignOrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'design_type' => ['nullable', 'in:'.implode(',', DesignOrder::TYPES)],
-            'package' => ['nullable', 'in:'.implode(',', DesignOrder::PACKAGES)],
+            'design_type' => ['nullable', Rule::in(DesignService::typeKeys())],
+            'package' => ['nullable', Rule::in(DesignService::packageKeys())],
             'print_product_id' => ['nullable', 'integer', 'exists:print_products,id'],
         ]);
         $order = $this->design->createDraft($request->user()->business, $request->user(), array_filter($data));
@@ -87,7 +88,7 @@ class DesignOrderController extends Controller
         return Inertia::render('app/design/'.$step, [
             'order' => Presenter::designOrder($designOrder->fresh()),
             'catalogue' => Presenter::designCatalogue(),
-            'products' => $step === 'service' ? PrintProduct::where('is_active', true)->whereIn('category', array_keys(DesignService::CATEGORY_TO_TYPE))->orderBy('sort')->get()->map(fn ($p) => Presenter::product($p)) : null,
+            'products' => $step === 'service' ? PrintProduct::forSale()->whereIn('category', DesignService::linkedCategories())->get()->map(fn ($p) => Presenter::product($p)) : null,
             'payment' => $step === 'confirm' ? Presenter::paymentContext($request->user()->business) : null,
             'upload' => ['max_mb' => 20, 'max_files' => DesignService::MAX_BRIEF_FILES, 'mimes' => DesignService::BRIEF_MIMES],
         ]);
@@ -98,8 +99,8 @@ class DesignOrderController extends Controller
     {
         $this->authorize('update', $designOrder);
         $data = $request->validate([
-            'design_type' => ['sometimes', 'in:'.implode(',', DesignOrder::TYPES)],
-            'package' => ['sometimes', 'in:'.implode(',', DesignOrder::PACKAGES)],
+            'design_type' => ['sometimes', Rule::in(DesignService::typeKeys())],
+            'package' => ['sometimes', Rule::in(DesignService::packageKeys())],
             'sides' => ['sometimes', 'integer', 'in:1,2'],
             'print_product_id' => ['sometimes', 'nullable', 'integer', 'exists:print_products,id'],
             'size' => ['sometimes', 'nullable', 'string', 'max:120'],

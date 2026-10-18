@@ -188,6 +188,8 @@ final class Presenter
             'reference' => $o->reference,
             'name' => $o->displayName(),
             'type_label' => $o->typeLabel(),
+            'type_icon' => (string) (app(PricingService::class)->designCard()['types'][$o->design_type]['icon'] ?? 'palette'),
+            'package_label' => $o->packageLabel(),
             'status' => $o->status,
             'step' => $o->step,
             'design_type' => $o->design_type,
@@ -254,19 +256,14 @@ final class Presenter
     public static function designCatalogue(): array
     {
         $card = app(PricingService::class)->designCard();
-        $blurb = [
-            'flyer' => 'Eye-catching flyers built for letterbox drops — headline, offer and call to action that get noticed.',
-            'brochure' => 'Folded brochures that tell your story across panels, ready for print and distribution.',
-            'business_card' => 'Professional business cards that match your brand and print perfectly.',
-            'presentation_folder' => 'Branded presentation folders with pocket and business-card slot artwork.',
-            'stationery' => 'A matching set: letterhead, compliments slip, envelope and business card.',
-        ];
 
         return [
             'types' => collect($card['types'])->map(fn ($t, $k) => [
                 'value' => (string) $k,
                 'label' => (string) $t['label'],
-                'description' => $blurb[$k] ?? '',
+                'description' => (string) ($t['description'] ?? ''),
+                'icon' => (string) ($t['icon'] ?? 'palette'),
+                'print_categories' => array_values((array) ($t['print_categories'] ?? [])),
                 'sides_option' => (bool) ($t['sides_option'] ?? false),
                 'prices' => collect($t['prices'])->map(fn ($v) => (int) round((float) $v * 100))->all(),
                 'from_cents' => (int) round(min(array_map('floatval', $t['prices'])) * 100),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Pricing\PricingService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,9 +18,7 @@ class DesignOrder extends Model
 {
     use HasFactory, SoftDeletes;
 
-    public const TYPES = ['flyer', 'brochure', 'business_card', 'presentation_folder', 'stationery'];
-
-    public const PACKAGES = ['basic', 'standard', 'premium'];
+    // Design services (types) and packages are admin-managed in the rate card: see DesignService::typeKeys().
 
     public const STATUSES = ['draft', 'submitted', 'in_design', 'proof_ready', 'changes_requested', 'approved', 'completed', 'cancelled'];
 
@@ -96,18 +95,21 @@ class DesignOrder extends Model
         return $this->revisions_included >= self::UNLIMITED_REVISIONS ? 0 : max(0, $this->revisions_used - $this->revisions_included);
     }
 
+    /** "Flyer", "Business card"… from the rate card label ("Flyer design"); falls back to the key for removed services. */
     public function typeLabel(): string
     {
-        return match ($this->design_type) {
-            'business_card' => 'Business card',
-            'presentation_folder' => 'Presentation folder',
-            'stationery' => 'Stationery set',
-            default => ucfirst((string) $this->design_type),
-        };
+        $label = app(PricingService::class)->designCard()['types'][$this->design_type]['label'] ?? null;
+
+        return $label ? (string) preg_replace('/\s+design$/i', '', (string) $label) : ucfirst(str_replace('_', ' ', (string) $this->design_type));
+    }
+
+    public function packageLabel(): string
+    {
+        return (string) (app(PricingService::class)->designCard()['packages'][$this->package]['label'] ?? ucfirst((string) $this->package));
     }
 
     public function displayName(): string
     {
-        return $this->typeLabel().' design · '.ucfirst((string) $this->package);
+        return $this->typeLabel().' design · '.$this->packageLabel();
     }
 }

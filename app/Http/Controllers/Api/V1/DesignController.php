@@ -22,6 +22,7 @@ use App\Support\BusinessDays;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 /**
  * @tags Design Studio
@@ -50,8 +51,8 @@ class DesignController extends Controller
     public function quote(Request $request, PricingService $pricing): JsonResponse
     {
         $data = $request->validate([
-            'design_type' => ['required', 'in:'.implode(',', DesignOrder::TYPES)],
-            'package' => ['required', 'in:'.implode(',', DesignOrder::PACKAGES)],
+            'design_type' => ['required', Rule::in(DesignService::typeKeys())],
+            'package' => ['required', Rule::in(DesignService::packageKeys())],
             'sides' => ['nullable', 'integer', 'in:1,2'],
             'addons' => ['nullable', 'array'],
             'addons.*' => ['string', 'max:40'],
@@ -180,8 +181,8 @@ class DesignController extends Controller
         $s = $creating ? [] : ['sometimes'];
 
         return [
-            'design_type' => [...$s, $creating ? 'nullable' : 'required', 'in:'.implode(',', DesignOrder::TYPES)],
-            'package' => [...$s, $creating ? 'nullable' : 'required', 'in:'.implode(',', DesignOrder::PACKAGES)],
+            'design_type' => [...$s, $creating ? 'nullable' : 'required', Rule::in(DesignService::typeKeys())],
+            'package' => [...$s, $creating ? 'nullable' : 'required', Rule::in(DesignService::packageKeys())],
             'sides' => [...$s, 'integer', 'in:1,2'],
             'print_product_id' => [...$s, 'nullable', 'integer', 'exists:print_products,id'],
             'size' => [...$s, 'nullable', 'string', 'max:120'],

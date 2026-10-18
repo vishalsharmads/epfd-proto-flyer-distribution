@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Design\DesignService;
+use App\Domain\Pricing\PricingService;
 use App\Http\Controllers\App\DesignOrderController as AppDesignOrderController;
 use App\Http\Controllers\App\Support\Presenter;
 use App\Models\AuditLog;
@@ -36,7 +37,7 @@ class DesignOrderController extends AdminController
             ->where('status', '!=', 'draft')
             ->when(in_array($status, DesignOrder::STATUSES, true), fn ($w) => $w->where('status', $status))
             ->when($status === 'awaiting_proof', fn ($w) => $w->whereIn('status', self::AWAITING_PROOF))
-            ->when(in_array($type, DesignOrder::TYPES, true), fn ($w) => $w->where('design_type', $type))
+            ->when(is_string($type) && $type !== '', fn ($w) => $w->where('design_type', $type))
             ->when($designer === 'unassigned', fn ($w) => $w->whereNull('designer_id'))
             ->when(ctype_digit($designer), fn ($w) => $w->where('designer_id', (int) $designer))
             ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('reference', 'ilike', "%{$q}%")->orWhere('headline', 'ilike', "%{$q}%")->orWhereHas('business', fn ($b) => $b->where('name', 'ilike', "%{$q}%"))))
@@ -45,7 +46,7 @@ class DesignOrderController extends AdminController
         return Inertia::render('admin/design-orders/index', [
             'orders' => $rows->through(fn (DesignOrder $d) => [
                 'id' => $d->id, 'reference' => $d->reference, 'status' => $d->status, 'design_type' => $d->design_type, 'type_label' => $d->typeLabel(),
-                'package' => $d->package, 'headline' => $d->headline, 'total_cents' => $d->total_cents, 'due_date' => $d->due_date?->toDateString(),
+                'package' => $d->package, 'package_label' => $d->packageLabel(), 'headline' => $d->headline, 'total_cents' => $d->total_cents, 'due_date' => $d->due_date?->toDateString(),
                 'revisions_used' => $d->revisions_used, 'revisions_included' => $d->revisions_included,
                 'submitted_at' => $d->submitted_at?->toIso8601String(), 'created_at' => $d->created_at?->toIso8601String(),
                 'business' => $d->business?->only('id', 'name'), 'designer' => $d->designer?->only('id', 'name'),
@@ -54,6 +55,10 @@ class DesignOrderController extends AdminController
             'counts' => ($counts = DesignOrder::where('status', '!=', 'draft')->selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status'))
                 ->put('awaiting_proof', $counts->only(self::AWAITING_PROOF)->sum()),
             'designers' => $this->designers(),
+            // Current services plus any (since removed) that existing orders still use.
+            'types' => collect(app(PricingService::class)->designCard()['types'])->map(fn ($t, $k) => ['value' => (string) $k, 'label' => (string) preg_replace('/\s+design$/i', '', (string) $t['label'])])
+                ->union(DesignOrder::where('status', '!=', 'draft')->distinct()->pluck('design_type')->mapWithKeys(fn ($k) => [$k => ['value' => $k, 'label' => ucfirst(str_replace('_', ' ', $k))]]))
+                ->values(),
         ]);
     }
 

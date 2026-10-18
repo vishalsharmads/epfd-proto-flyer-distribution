@@ -13,8 +13,8 @@ class PrintCategory extends Model
 {
     use HasFactory;
 
-    /** Lucide icon names an admin can pick (rendered by print-bits.tsx). */
-    public const ICONS = ['file-text', 'book-open', 'magnet', 'credit-card', 'image', 'flag', 'newspaper', 'printer', 'sticky-note', 'tag', 'mail', 'package', 'ticket', 'calendar', 'shirt', 'gift'];
+    /** Lucide icon names an admin can pick for categories and design services (rendered by print-bits.tsx). */
+    public const ICONS = ['file-text', 'book-open', 'magnet', 'credit-card', 'image', 'flag', 'newspaper', 'printer', 'sticky-note', 'tag', 'mail', 'package', 'ticket', 'calendar', 'shirt', 'gift', 'folder-open', 'palette'];
 
     protected $guarded = ['id'];
 

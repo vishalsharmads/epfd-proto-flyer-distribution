@@ -1,5 +1,5 @@
 import { DesignArt, DESIGN_STEPS, revisionsText } from '@/components/app/design-bits';
-import type { DesignCatalogue, DesignOrderT, DesignPackage, DesignType, ProductT } from '@/components/app/types';
+import type { DesignCatalogue, DesignOrderT, DesignPackage, ProductT } from '@/components/app/types';
 import { PriceBreakdown, useAutosave, WizardShell } from '@/components/app/wizard';
 import { Field, Select } from '@/components/ui/form';
 import { Alert, Badge, Card, CardBody } from '@/components/ui/surface';
@@ -10,15 +10,6 @@ import { Check, Clock, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
 type Res = { data: DesignOrderT };
-
-/** Print-product categories that suit each design type (for the optional "print size" choice). */
-const CATEGORIES: Record<DesignType, string[]> = {
-    flyer: ['flyer', 'poster', 'banner', 'magnet'],
-    brochure: ['brochure', 'catalogue'],
-    business_card: ['business_card'],
-    presentation_folder: [],
-    stationery: ['business_card'],
-};
 
 export default function DesignService({ order: initial, catalogue, products }: { order: DesignOrderT; catalogue: DesignCatalogue; products: ProductT[] }) {
     const [o, setO] = useState(initial);
@@ -33,7 +24,9 @@ export default function DesignService({ order: initial, catalogue, products }: {
 
     const type = catalogue.types.find((t) => t.value === o.design_type) ?? catalogue.types[0];
     const sidesFactor = type.sides_option && o.sides === 2 ? 1 + catalogue.double_sided_pct / 100 : 1;
-    const sizeOptions = products.filter((p) => CATEGORIES[o.design_type].includes(p.category));
+    // Print sizes for the optional "print size" choice: products in the categories linked to this service (rate card).
+    const linked = catalogue.types.find((t) => t.value === o.design_type)?.print_categories ?? [];
+    const sizeOptions = products.filter((p) => linked.includes(p.category));
 
     const next = async () => {
         setLeaving(true);
@@ -57,7 +50,7 @@ export default function DesignService({ order: initial, catalogue, products }: {
                                     <label key={t.value} data-testid={`type-${t.value}`} className={cn('relative cursor-pointer overflow-hidden rounded-[14px] border bg-surface text-sm transition-[border,box-shadow]', o.design_type === t.value ? 'border-fg ring-2 ring-fg/10' : 'border-border hover:border-border-strong')}>
                                         <input type="radio" name="design_type" className="sr-only" checked={o.design_type === t.value} onChange={() => set({ design_type: t.value, print_product_id: null, size: null, product: null })} />
                                         {o.design_type === t.value && <Check className="absolute top-2 right-2 z-10 size-5 rounded-full bg-ink-900 p-0.5 text-white" aria-hidden />}
-                                        <DesignArt type={t.value} className="aspect-[16/9]" />
+                                        <DesignArt icon={t.icon} className="aspect-[16/9]" />
                                         <span className="block px-3 pt-2 font-medium">{t.label.replace(' design', '')}</span>
                                         <span className="block px-3 pb-3 text-xs text-muted">from {money(t.from_cents)}</span>
                                     </label>

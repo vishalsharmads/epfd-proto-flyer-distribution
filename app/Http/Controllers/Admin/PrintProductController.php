@@ -105,7 +105,7 @@ class PrintProductController extends AdminController
             'product' => $product->exists ? $product->only('id', 'slug', 'name', 'description', 'category', 'size_label', 'width_mm', 'height_mm', 'bleed_mm', 'from_price_cents', 'gsm_options', 'finish_options', 'quantity_options', 'distributable', 'distribution_material', 'turnaround_days', 'sort', 'is_active')
                 + ['sides_options' => $product->sides(), 'image_url' => $product->imageUrl(), 'unpriced' => $this->catalogue->unpricedCount($product)]
                 : $product->only('category', 'bleed_mm', 'turnaround_days', 'gsm_options', 'sides_options', 'finish_options', 'quantity_options', 'distributable', 'is_active', 'sort') + ['id' => null, 'image_url' => null, 'unpriced' => 0],
-            'categories' => PrintCategory::orderBy('sort')->orderBy('name')->get(['slug', 'name', 'is_active']),
+            'categories' => PrintCategory::orderBy('sort')->orderBy('name')->get(['slug', 'name', 'icon', 'is_active']),
             'finishes' => collect($card['print']['finishes'] ?? [])->map(fn ($f, $k) => ['value' => (string) $k, 'label' => (string) $f['label']])->values(),
             'materials' => collect($card['distribution']['materials'] ?? [])->map(fn ($m, $k) => ['value' => (string) $k, 'label' => (string) ($m['label'] ?? $k)])->values(),
         ]);

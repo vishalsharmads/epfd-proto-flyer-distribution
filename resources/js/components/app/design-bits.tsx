@@ -1,16 +1,15 @@
+import { CATEGORY_ICONS } from '@/components/app/print-bits';
 import type { DesignAssetT, DesignOrderT, DesignPackageOption, DesignType } from '@/components/app/types';
 import { Button } from '@/components/ui/button';
 import { api, ApiError, cn, money } from '@/lib/utils';
-import { BookOpen, CreditCard, FileImage, FileText, FolderOpen, Loader2, Mail, Palette, Trash2, Upload } from 'lucide-react';
+import { FileImage, Loader2, Palette, Trash2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 export const DESIGN_STEPS = ['Start', 'Service', 'Brief', 'Confirm'];
 
-const icons: Record<DesignType, typeof FileText> = { flyer: FileText, brochure: BookOpen, business_card: CreditCard, presentation_folder: FolderOpen, stationery: Mail };
-
-/** Tinted tile with the design type's icon (no stock imagery). */
-export function DesignArt({ type, className }: { type: DesignType | string; className?: string }) {
-    const Icon = icons[type as DesignType] ?? Palette;
+/** Tinted tile with the design service's icon (admin-chosen in the rate card; no stock imagery). */
+export function DesignArt({ icon, className }: { type?: DesignType; icon?: string | null; className?: string }) {
+    const Icon = (icon && CATEGORY_ICONS[icon]) || Palette;
     return (
         <div className={cn('grid place-items-center bg-gradient-to-br from-primary-soft to-surface-2', className)} aria-hidden>
             <div className="grid size-14 place-items-center rounded-[14px] border border-border bg-surface shadow-sm">

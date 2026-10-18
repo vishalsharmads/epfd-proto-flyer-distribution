@@ -30,7 +30,7 @@ export default function DesignStart({ drafts, catalogue }: { drafts: DesignOrder
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
                     {catalogue.types.map((t) => (
                         <button key={t.value} type="button" disabled={busy} onClick={() => start(t.value)} className="overflow-hidden rounded-[14px] border border-border bg-surface text-left text-sm transition-shadow hover:shadow-md focus-visible:outline-2">
-                            <DesignArt type={t.value} className="aspect-[16/9]" />
+                            <DesignArt icon={t.icon} className="aspect-[16/9]" />
                             <span className="block px-3 pt-2 font-medium">{t.label}</span>
                             <span className="block px-3 pb-3 text-xs text-muted">{fromLabel(t.from_cents)}</span>
                         </button>
@@ -45,7 +45,7 @@ export default function DesignStart({ drafts, catalogue }: { drafts: DesignOrder
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {drafts.map((o) => (
-                                <DraftCard key={o.id} media={<DesignArt type={o.design_type} className="size-full" />} title={o.name} meta={<>{money(o.total_cents)} · edited {ago(o.updated_at)}</>} onOpen={() => router.visit(designStepUrl(o))} deleteUrl={`/app/design/${o.id}`} />
+                                <DraftCard key={o.id} media={<DesignArt icon={o.type_icon} className="size-full" />} title={o.name} meta={<>{money(o.total_cents)} · edited {ago(o.updated_at)}</>} onOpen={() => router.visit(designStepUrl(o))} deleteUrl={`/app/design/${o.id}`} />
                             ))}
                         </div>
                     )}

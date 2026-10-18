@@ -29,6 +29,12 @@ final class PricingFactory
         $card = RateCard::where('is_active', true)->latest('id')->value('data') ?? RateCardDefaults::data();
         // Cards saved before Design Studio existed have no `design` section: use the defaults.
         $card['design'] ??= RateCardDefaults::design();
+        // Cards saved before design types were admin-managed lack description/icon/links: take the defaults for known types.
+        $defaults = RateCardDefaults::designTypes();
+        foreach ($card['design']['types'] ?? [] as $key => $type) {
+            $card['design']['types'][$key] = $type + array_intersect_key($defaults[$key] ?? [], array_flip(['description', 'icon', 'print_categories', 'default_product']))
+                + ['description' => '', 'icon' => 'palette', 'print_categories' => [], 'default_product' => null];
+        }
 
         return $card;
     }

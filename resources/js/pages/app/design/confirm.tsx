@@ -70,7 +70,7 @@ export default function DesignConfirm({ order: initial, catalogue, payment }: { 
                         <Card>
                             <CardBody className="space-y-5">
                                 <div className="flex items-center gap-3">
-                                    <DesignArt type={o.design_type} className="size-14 shrink-0 rounded-[10px] [&>div]:size-9 [&_svg]:size-4" />
+                                    <DesignArt icon={o.type_icon} className="size-14 shrink-0 rounded-[10px] [&>div]:size-9 [&_svg]:size-4" />
                                     <div>
                                         <h2 className="font-semibold">{o.name}</h2>
                                         <p className="text-sm text-muted">{o.reference}</p>

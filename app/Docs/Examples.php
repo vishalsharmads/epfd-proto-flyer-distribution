@@ -172,7 +172,7 @@ final class Examples
         $types = [['flyer', 'Flyer design', true, [9900, 17900, 29900]], ['brochure', 'Brochure design', false, [24900, 39900, 59900]], ['business_card', 'Business card design', true, [7900, 12900, 19900]], ['presentation_folder', 'Presentation folder design', false, [29900, 44900, 69900]], ['stationery', 'Stationery set design', false, [19900, 34900, 54900]]];
 
         return [
-            'types' => array_map(fn ($t) => ['value' => $t[0], 'label' => $t[1], 'description' => '…', 'sides_option' => $t[2], 'prices' => ['basic' => $t[3][0], 'standard' => $t[3][1], 'premium' => $t[3][2]], 'from_cents' => $t[3][0]], $types),
+            'types' => array_map(fn ($t) => ['value' => $t[0], 'label' => $t[1], 'description' => '…', 'icon' => 'file-text', 'print_categories' => [$t[0]], 'sides_option' => $t[2], 'prices' => ['basic' => $t[3][0], 'standard' => $t[3][1], 'premium' => $t[3][2]], 'from_cents' => $t[3][0]], $types),
             'packages' => [
                 ['value' => 'basic', 'label' => 'Basic', 'description' => 'One concept from your brief, 1 revision.', 'revisions' => 1, 'unlimited' => false, 'turnaround_days' => 5],
                 ['value' => 'standard', 'label' => 'Standard', 'description' => 'Two concepts, 3 revisions, faster turnaround.', 'revisions' => 3, 'unlimited' => false, 'turnaround_days' => 3],

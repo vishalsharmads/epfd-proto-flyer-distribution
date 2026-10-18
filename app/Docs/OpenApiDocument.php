@@ -39,7 +39,7 @@ final class OpenApiDocument
         ['/pricing', 'Pricing', 'Distribution, print and design quotes from the active rate card (ex GST + GST lines).'],
         ['/campaigns', 'Campaigns', 'Distribution campaigns: drafts, areas, readiness, payment and live tracking.'],
         ['/print', 'Print', 'Print catalogue, options/price matrix, print orders, artwork upload and payment.'],
-        ['/design', 'Design Studio', 'Graphic design orders (flyer, brochure, business card, presentation folder, stationery): services and prices, drafts with a brief, reference uploads, payment, proof approval and change requests.'],
+        ['/design', 'Design Studio', 'Graphic design orders: services and packages (admin-managed — list them with GET /design/services), drafts with a brief, reference uploads, payment, proof approval and change requests.'],
         ['/payments', 'Payments & invoices', 'Payment history and GST tax invoices.'],
         ['/invoices', 'Payments & invoices', ''],
         ['/support', 'Support', 'Support threads between a business and EPFD staff.'],

@@ -50,22 +50,45 @@ final class DesignService
     /** Statuses in which staff may upload a (new) proof. */
     public const PROOFABLE = ['submitted', 'in_design', 'proof_ready', 'changes_requested'];
 
-    /** Print-product category → design type (for "Don't have artwork? Get it designed"). */
-    public const CATEGORY_TO_TYPE = [
-        'flyer' => 'flyer', 'poster' => 'flyer', 'banner' => 'flyer', 'magnet' => 'flyer',
-        'brochure' => 'brochure', 'catalogue' => 'brochure', 'business_card' => 'business_card',
-    ];
-
-    /** Default print product per design type (used by "Print this design" when none was chosen). */
-    public const DEFAULT_PRODUCT = [
-        'flyer' => 'a5-flyers', 'brochure' => 'a4-folded-brochures', 'business_card' => 'business-cards', 'stationery' => 'business-cards',
-    ];
-
     public const BRIEF_MIMES = ['application/pdf', 'image/png', 'image/jpeg', 'image/svg+xml'];
 
     public const PROOF_MIMES = ['application/pdf', 'image/png', 'image/jpeg'];
 
     public const MAX_BRIEF_FILES = 10;
+
+    /** @return list<string> design service keys from the active rate card (admin-managed) */
+    public static function typeKeys(): array
+    {
+        return array_map('strval', array_keys(app(PricingService::class)->designCard()['types']));
+    }
+
+    /** @return list<string> package keys from the active rate card (admin-managed) */
+    public static function packageKeys(): array
+    {
+        return array_map('strval', array_keys(app(PricingService::class)->designCard()['packages']));
+    }
+
+    /** Design service whose linked print categories include $category ("Don't have artwork? Get it designed"). */
+    public static function typeForCategory(?string $category): string
+    {
+        $types = app(PricingService::class)->designCard()['types'];
+        foreach ($types as $key => $type) {
+            if ($category !== null && in_array($category, (array) ($type['print_categories'] ?? []), true)) {
+                return (string) $key;
+            }
+        }
+
+        return (string) array_key_first($types);
+    }
+
+    /** @return list<string> print categories linked to any design service */
+    public static function linkedCategories(): array
+    {
+        return array_values(array_unique(array_merge(...array_values(array_map(
+            fn (array $t) => array_map('strval', (array) ($t['print_categories'] ?? [])),
+            app(PricingService::class)->designCard()['types'],
+        )) ?: [[]])));
+    }
 
     /** @param array<string, mixed> $attrs */
     public function createDraft(Business $business, User $user, array $attrs = []): DesignOrder
@@ -76,14 +99,14 @@ final class DesignService
             'reference' => Reference::make('DSN', 'design_orders'),
             'status' => 'draft',
             'step' => 2,
-            'design_type' => 'flyer',
-            'package' => 'standard',
+            'design_type' => self::typeForCategory(null),
+            'package' => in_array('standard', self::packageKeys(), true) ? 'standard' : self::packageKeys()[0],
             'sides' => 1,
             'contact_details' => trim($business->contact_name.' · '.$business->mobile.' · '.$business->email),
         ]);
         if (! empty($attrs['print_product_id']) && empty($attrs['design_type'])) {
             $product = PrintProduct::find($attrs['print_product_id']);
-            $attrs['design_type'] = self::CATEGORY_TO_TYPE[$product?->category] ?? 'flyer';
+            $attrs['design_type'] = self::typeForCategory($product?->category);
         }
 
         return $this->update($order, $attrs);
@@ -106,7 +129,7 @@ final class DesignService
             $errors['design_type'] = ['Choose one of the listed design services.'];
         }
         if (isset($data['package']) && ! isset($card['packages'][$data['package']])) {
-            $errors['package'] = ['Choose Basic, Standard or Premium.'];
+            $errors['package'] = ['Choose '.collect($card['packages'])->pluck('label')->join(', ', ' or ').'.'];
         }
         foreach ($addons as $a) {
             if (! isset($card['addons'][$a])) {
@@ -327,12 +350,12 @@ final class DesignService
 
     public function printProduct(DesignOrder $order): ?PrintProduct
     {
-        if ($order->print_product_id && ($p = PrintProduct::where('is_active', true)->find($order->print_product_id))) {
+        if ($order->print_product_id && ($p = PrintProduct::forSale()->find($order->print_product_id))) {
             return $p;
         }
-        $slug = self::DEFAULT_PRODUCT[$order->design_type] ?? null;
+        $slug = app(PricingService::class)->designCard()['types'][$order->design_type]['default_product'] ?? null;
 
-        return $slug ? PrintProduct::where('is_active', true)->where('slug', $slug)->first() : null;
+        return $slug ? PrintProduct::forSale()->where('slug', $slug)->first() : null;
     }
 
     /** "Print this design": a print-order draft with the matching product and the design attached as artwork. */

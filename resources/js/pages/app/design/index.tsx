@@ -40,7 +40,7 @@ export default function DesignHub({ orders, catalogue }: { orders: DesignOrderT[
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     {catalogue.types.map((t) => (
                         <button key={t.value} type="button" data-testid={`design-service-${t.value}`} disabled={busy !== null} onClick={() => start(t.value)} className="flex flex-col overflow-hidden rounded-[16px] border border-border bg-surface text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 disabled:opacity-70">
-                            <DesignArt type={t.value} className="aspect-[16/10] w-full" />
+                            <DesignArt icon={t.icon} className="aspect-[16/10] w-full" />
                             <div className="flex flex-1 flex-col p-4">
                                 <p className="font-semibold">{t.label}</p>
                                 <p className="mt-1 flex-1 text-sm text-muted">{t.description}</p>
@@ -62,7 +62,7 @@ export default function DesignHub({ orders, catalogue }: { orders: DesignOrderT[
                         {orders.map((o) => (
                             <li key={o.id}>
                                 <Link href={o.status === 'draft' ? designStepUrl(o) : `/app/jobs/design/${o.id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-surface-2 sm:px-5" data-testid={`design-order-${o.id}`}>
-                                    <DesignArt type={o.design_type} className="size-12 shrink-0 rounded-[10px] [&>div]:size-8 [&>div]:rounded-[8px] [&_svg]:size-4" />
+                                    <DesignArt icon={o.type_icon} className="size-12 shrink-0 rounded-[10px] [&>div]:size-8 [&>div]:rounded-[8px] [&_svg]:size-4" />
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-medium">{o.name}</p>
                                         <p className="truncate text-xs text-muted">

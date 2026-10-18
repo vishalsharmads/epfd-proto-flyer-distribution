@@ -28,7 +28,7 @@ class DesignOrderController extends Controller
     {
         $request->validate([
             'status' => ['nullable', 'in:'.implode(',', DesignOrder::STATUSES)],
-            'design_type' => ['nullable', 'in:'.implode(',', DesignOrder::TYPES)],
+            'design_type' => ['nullable', 'string', 'max:40'],
             'business_id' => ['nullable', 'integer'],
         ]);
 

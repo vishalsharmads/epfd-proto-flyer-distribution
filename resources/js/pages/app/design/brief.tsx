@@ -104,7 +104,7 @@ export default function DesignBrief({ order: initial, upload }: { order: DesignO
                         <Card>
                             <CardBody className="space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <DesignArt type={o.design_type} className="size-12 shrink-0 rounded-[10px] [&>div]:size-8 [&_svg]:size-4" />
+                                    <DesignArt icon={o.type_icon} className="size-12 shrink-0 rounded-[10px] [&>div]:size-8 [&_svg]:size-4" />
                                     <div>
                                         <h2 className="font-semibold">{o.name}</h2>
                                         <p className="text-sm text-muted">{o.reference}{o.size && ` · ${o.size}`}</p>

@@ -61,6 +61,9 @@ final class RateCardDefaults
      * Design Studio (graphic design) — PLACEHOLDER prices, ex GST, AUD; needs EPFD sign-off.
      * Price = package price for the design type (× (1 + double_sided_pct) when a two-sided design of a
      * type that offers sides) + add-ons − promo + GST. `revisions` 99 = unlimited.
+     * Types and packages are admin-managed (Rate card → Design). Per type: `print_categories` = print categories
+     * whose "Get it designed" link opens this service; `default_product` = print product used by "Print this
+     * design" when the customer chose none.
      *
      * @return array<string, mixed>
      */
@@ -68,13 +71,7 @@ final class RateCardDefaults
     {
         return [
             'double_sided_pct' => 40,
-            'types' => [
-                'flyer' => ['label' => 'Flyer design', 'sides_option' => true, 'prices' => ['basic' => 99, 'standard' => 179, 'premium' => 299]],
-                'brochure' => ['label' => 'Brochure design', 'sides_option' => false, 'prices' => ['basic' => 249, 'standard' => 399, 'premium' => 599]],
-                'business_card' => ['label' => 'Business card design', 'sides_option' => true, 'prices' => ['basic' => 79, 'standard' => 129, 'premium' => 199]],
-                'presentation_folder' => ['label' => 'Presentation folder design', 'sides_option' => false, 'prices' => ['basic' => 299, 'standard' => 449, 'premium' => 699]],
-                'stationery' => ['label' => 'Stationery set design', 'sides_option' => false, 'prices' => ['basic' => 199, 'standard' => 349, 'premium' => 549]],
-            ],
+            'types' => self::designTypes(),
             'packages' => [
                 'basic' => ['label' => 'Basic', 'revisions' => 1, 'turnaround_days' => 5, 'description' => 'One concept from your brief, 1 revision.'],
                 'standard' => ['label' => 'Standard', 'revisions' => 3, 'turnaround_days' => 3, 'description' => 'Two concepts, 3 revisions, faster turnaround.'],
@@ -87,6 +84,43 @@ final class RateCardDefaults
                 'stock_imagery' => ['label' => 'Licensed stock imagery', 'fixed' => 25.00],
             ],
             'rush_turnaround_days' => 2,
+        ];
+    }
+
+    /** @return array<string, array<string, mixed>> */
+    public static function designTypes(): array
+    {
+        return [
+            'flyer' => [
+                'label' => 'Flyer design', 'sides_option' => true, 'icon' => 'file-text',
+                'description' => 'Eye-catching flyers built for letterbox drops — headline, offer and call to action that get noticed.',
+                'print_categories' => ['flyer', 'poster', 'banner', 'magnet'], 'default_product' => 'a5-flyers',
+                'prices' => ['basic' => 99, 'standard' => 179, 'premium' => 299],
+            ],
+            'brochure' => [
+                'label' => 'Brochure design', 'sides_option' => false, 'icon' => 'book-open',
+                'description' => 'Folded brochures that tell your story across panels, ready for print and distribution.',
+                'print_categories' => ['brochure', 'catalogue'], 'default_product' => 'a4-folded-brochures',
+                'prices' => ['basic' => 249, 'standard' => 399, 'premium' => 599],
+            ],
+            'business_card' => [
+                'label' => 'Business card design', 'sides_option' => true, 'icon' => 'credit-card',
+                'description' => 'Professional business cards that match your brand and print perfectly.',
+                'print_categories' => ['business_card'], 'default_product' => 'business-cards',
+                'prices' => ['basic' => 79, 'standard' => 129, 'premium' => 199],
+            ],
+            'presentation_folder' => [
+                'label' => 'Presentation folder design', 'sides_option' => false, 'icon' => 'folder-open',
+                'description' => 'Branded presentation folders with pocket and business-card slot artwork.',
+                'print_categories' => [], 'default_product' => null,
+                'prices' => ['basic' => 299, 'standard' => 449, 'premium' => 699],
+            ],
+            'stationery' => [
+                'label' => 'Stationery set design', 'sides_option' => false, 'icon' => 'mail',
+                'description' => 'A matching set: letterhead, compliments slip, envelope and business card.',
+                'print_categories' => ['business_card'], 'default_product' => 'business-cards',
+                'prices' => ['basic' => 199, 'standard' => 349, 'premium' => 549],
+            ],
         ];
     }
 }

@@ -30,7 +30,7 @@ interface CardData {
     design: {
         double_sided_pct: Money;
         rush_turnaround_days: Money;
-        types: Record<string, { label: string; sides_option: boolean; prices: Record<string, Money> }>;
+        types: Record<string, { label: string; sides_option: boolean; prices: Record<string, Money>; description?: string; icon?: string; print_categories?: string[]; default_product?: string | null }>;
         packages: Record<string, { label: string; description?: string; revisions: Money; turnaround_days: Money }>;
         addons: Record<string, { label: string; pct?: Money | null; fixed?: Money | null }>;
     };
@@ -72,6 +72,8 @@ interface Props {
     matrix: { product_id: number; options: Option[] } | null;
     promos: Promo[];
     tab: string;
+    categories?: { slug: string; name: string }[];
+    icons?: string[];
 }
 
 function setIn<T>(obj: T, path: (string | number)[], value: unknown): T {
@@ -152,7 +154,7 @@ export default function RateCardPage(props: Props) {
 
             {['distribution', 'print', 'design'].includes(tab) && (
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-                    <div className="min-w-0 space-y-6">{tab === 'distribution' ? <DistributionEditor d={draft} set={set} err={err} /> : tab === 'print' ? <PrintEditor d={draft} set={set} err={err} /> : <DesignEditor d={draft} set={set} err={err} />}</div>
+                    <div className="min-w-0 space-y-6">{tab === 'distribution' ? <DistributionEditor d={draft} set={set} err={err} /> : tab === 'print' ? <PrintEditor d={draft} set={set} err={err} /> : <DesignEditor d={draft} set={set} err={err} categories={props.categories ?? []} products={props.products} icons={props.icons ?? []} />}</div>
                     <PreviewCalculator key={tab === 'design' ? 'design' : 'other'} draft={draft} products={props.products} initialService={tab === 'design' ? 'design' : tab === 'print' ? 'print' : 'distribution'} />
                 </div>
             )}
@@ -365,61 +367,279 @@ function PrintEditor({ d, set, err }: EditorProps) {
     );
 }
 
-function DesignEditor({ d, set, err }: EditorProps) {
+const slugKey = (label: string) =>
+    label
+        .trim()
+        .toLowerCase()
+        .replace(/\s+design$/, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 40);
+
+function DesignEditor({
+    d,
+    set,
+    err,
+    categories,
+    products,
+    icons,
+}: EditorProps & { categories: { slug: string; name: string }[]; products: Product[]; icons: string[] }) {
     const g = d.design;
     const pkgs = Object.keys(g.packages);
     const [newAddon, setNewAddon] = useState('');
+    const [newType, setNewType] = useState('');
+    const [newPkg, setNewPkg] = useState('');
+    const addType = () => {
+        const key = slugKey(newType);
+        if (!key || g.types[key]) return;
+        const label = /design$/i.test(newType.trim()) ? newType.trim() : `${newType.trim()} design`;
+        set(['design', 'types', key], {
+            label,
+            sides_option: false,
+            icon: 'palette',
+            description: '',
+            print_categories: [],
+            default_product: null,
+            prices: Object.fromEntries(pkgs.map((p) => [p, ''])),
+        });
+        setNewType('');
+    };
+    const removeType = (k: string) => {
+        const next = { ...g.types };
+        delete next[k];
+        set(['design', 'types'], next);
+    };
+    const addPkg = () => {
+        const key = slugKey(newPkg);
+        if (!key || g.packages[key]) return;
+        set(['design'], {
+            ...g,
+            packages: { ...g.packages, [key]: { label: newPkg.trim(), description: '', revisions: 1, turnaround_days: 5 } },
+            types: Object.fromEntries(Object.entries(g.types).map(([k, t]) => [k, { ...t, prices: { ...t.prices, [key]: '' } }])),
+        });
+        setNewPkg('');
+    };
+    const removePkg = (key: string) => {
+        const packages = { ...g.packages };
+        delete packages[key];
+        set(['design'], {
+            ...g,
+            packages,
+            types: Object.fromEntries(
+                Object.entries(g.types).map(([k, t]) => [
+                    k,
+                    { ...t, prices: Object.fromEntries(Object.entries(t.prices).filter(([p]) => p !== key)) },
+                ]),
+            ),
+        });
+    };
     return (
         <>
             <Alert tone="warning" title="Placeholder prices">
                 Design Studio prices are prototype placeholders (ex GST) — confirm EPFD's real design rates before launch.
             </Alert>
+            {err('design.types') && <Alert tone="danger">{err('design.types')}</Alert>}
             <Card>
-                <CardHeader title="Design prices by service" description="Ex GST, AUD per design. Double-sided uplift applies to services with a sides option." />
-                <CardBody className="space-y-4">
-                    <div className="hidden gap-3 text-xs font-medium text-muted sm:grid sm:grid-cols-[1.4fr_repeat(3,1fr)_auto]">
-                        <span>Service</span>
-                        {pkgs.map((p) => (
-                            <span key={p}>{g.packages[p].label}</span>
-                        ))}
-                        <span>Sides option</span>
-                    </div>
-                    {Object.entries(g.types).map(([k, t]) => (
-                        <div key={k} className="grid items-start gap-3 sm:grid-cols-[1.4fr_repeat(3,1fr)_auto]">
-                            <Input aria-label={`${k} label`} value={t.label} onChange={(e) => set(['design', 'types', k, 'label'], e.target.value)} />
-                            {pkgs.map((p) => (
-                                <NumInput key={p} label={`${t.label} ${g.packages[p].label} price`} prefix="$" step="1" value={t.prices[p] ?? ''} onChange={(v) => set(['design', 'types', k, 'prices', p], v)} error={err(`design.types.${k}.prices.${p}`)} />
-                            ))}
-                            <label className="flex h-11 items-center gap-2 text-sm">
-                                <Switch checked={!!t.sides_option} onCheckedChange={(v) => set(['design', 'types', k, 'sides_option'], v)} aria-label={`${t.label} offers single/double-sided`} />
-                                <span className="sm:sr-only">Sides option</span>
-                            </label>
-                        </div>
-                    ))}
+                <CardHeader
+                    title="Design services"
+                    description="What customers can order in Design Studio. Prices are ex GST, AUD per design; the double-sided uplift applies to services with a sides option."
+                />
+                <CardBody className="space-y-6">
+                    {Object.entries(g.types).map(([k, t]) => {
+                        const linked = t.print_categories ?? [];
+                        return (
+                            <div key={k} className="space-y-3 rounded-[12px] border border-border p-4" data-testid={`design-type-${k}`}>
+                                <div className="grid items-end gap-3 sm:grid-cols-[1.6fr_1fr_auto_auto]">
+                                    <Field label="Service name" error={err(`design.types.${k}.label`)}>
+                                        <Input value={t.label} onChange={(e) => set(['design', 'types', k, 'label'], e.target.value)} />
+                                    </Field>
+                                    <Field label="Icon">
+                                        <Select value={t.icon ?? 'palette'} onChange={(e) => set(['design', 'types', k, 'icon'], e.target.value)}>
+                                            {icons.map((i) => (
+                                                <option key={i} value={i}>
+                                                    {i}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </Field>
+                                    <label className="flex h-11 items-center gap-2 text-sm">
+                                        <Switch
+                                            checked={!!t.sides_option}
+                                            onCheckedChange={(v) => set(['design', 'types', k, 'sides_option'], v)}
+                                            aria-label={`${t.label} offers single/double-sided`}
+                                        />
+                                        Sides option
+                                    </label>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        aria-label={`Remove ${t.label}`}
+                                        disabled={Object.keys(g.types).length <= 1}
+                                        onClick={() => removeType(k)}
+                                    >
+                                        <Trash2 />
+                                    </Button>
+                                </div>
+                                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(120px, 1fr))` }}>
+                                    {pkgs.map((p) => (
+                                        <Field key={p} label={g.packages[p].label}>
+                                            <NumInput
+                                                label={`${t.label} ${g.packages[p].label} price`}
+                                                prefix="$"
+                                                step="1"
+                                                value={t.prices[p] ?? ''}
+                                                onChange={(v) => set(['design', 'types', k, 'prices', p], v)}
+                                                error={err(`design.types.${k}.prices.${p}`)}
+                                            />
+                                        </Field>
+                                    ))}
+                                </div>
+                                <Field label="Description" hint="Shown on the service card" error={err(`design.types.${k}.description`)}>
+                                    <Input
+                                        value={t.description ?? ''}
+                                        maxLength={255}
+                                        onChange={(e) => set(['design', 'types', k, 'description'], e.target.value)}
+                                    />
+                                </Field>
+                                <div className="grid gap-3 sm:grid-cols-[1.6fr_1fr]">
+                                    <fieldset>
+                                        <legend className="mb-1.5 text-sm font-medium">Linked print categories</legend>
+                                        <p className="mb-2 text-xs text-muted">
+                                            “Get it designed” on these products opens this service; their sizes are offered as print sizes.
+                                        </p>
+                                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                                            {categories.map((c) => {
+                                                const id = `link-${k}-${c.slug}`;
+                                                return (
+                                                    <span key={c.slug} className="inline-flex items-center gap-2">
+                                                        <Checkbox
+                                                            id={id}
+                                                            checked={linked.includes(c.slug)}
+                                                            onCheckedChange={(v) =>
+                                                                set(
+                                                                    ['design', 'types', k, 'print_categories'],
+                                                                    v === true ? [...linked, c.slug] : linked.filter((x) => x !== c.slug),
+                                                                )
+                                                            }
+                                                        />
+                                                        <Label htmlFor={id}>{c.name}</Label>
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    </fieldset>
+                                    <Field
+                                        label="Default print product"
+                                        optional
+                                        hint="Used by “Print this design” when no size was chosen"
+                                        error={err(`design.types.${k}.default_product`)}
+                                    >
+                                        <Select
+                                            value={t.default_product ?? ''}
+                                            onChange={(e) => set(['design', 'types', k, 'default_product'], e.target.value || null)}
+                                        >
+                                            <option value="">None</option>
+                                            {products.map((p) => (
+                                                <option key={p.slug} value={p.slug}>
+                                                    {p.name}
+                                                    {p.is_active ? '' : ' (hidden)'}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </Field>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <form
+                        className="flex gap-2 border-t border-border pt-4"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            addType();
+                        }}
+                    >
+                        <Input
+                            aria-label="New design service name"
+                            placeholder="New service, e.g. Logo design"
+                            value={newType}
+                            onChange={(e) => setNewType(e.target.value)}
+                        />
+                        <Button type="submit" variant="secondary" disabled={!slugKey(newType) || !!g.types[slugKey(newType)]}>
+                            <Plus /> Add service
+                        </Button>
+                    </form>
+                    <p className="text-xs text-muted">Removing a service stops new orders for it; existing orders keep their details.</p>
                 </CardBody>
             </Card>
             <Card>
-                <CardHeader title="Packages" description="Revisions included (99 = unlimited) and business days to first proof" />
+                <CardHeader
+                    title="Packages"
+                    description="Revisions included (99 = unlimited) and business days to first proof. Every service needs a price for every package."
+                />
                 <CardBody className="space-y-4">
+                    {err('design.packages') && <p className="text-sm text-danger">{err('design.packages')}</p>}
                     {pkgs.map((p) => {
                         const pk = g.packages[p];
                         return (
-                            <div key={p} className="grid items-start gap-3 sm:grid-cols-[1fr_120px_140px]">
-                                <Field label="Label">
+                            <div key={p} className="grid items-start gap-3 sm:grid-cols-[1fr_120px_140px_auto]">
+                                <Field label="Label" error={err(`design.packages.${p}.label`)}>
                                     <Input value={pk.label} onChange={(e) => set(['design', 'packages', p, 'label'], e.target.value)} />
                                 </Field>
                                 <Field label="Revisions">
-                                    <NumInput label={`${pk.label} revisions`} step="1" value={pk.revisions} onChange={(v) => set(['design', 'packages', p, 'revisions'], v)} error={err(`design.packages.${p}.revisions`)} />
+                                    <NumInput
+                                        label={`${pk.label} revisions`}
+                                        step="1"
+                                        value={pk.revisions}
+                                        onChange={(v) => set(['design', 'packages', p, 'revisions'], v)}
+                                        error={err(`design.packages.${p}.revisions`)}
+                                    />
                                 </Field>
                                 <Field label="Turnaround">
-                                    <NumInput label={`${pk.label} turnaround days`} step="1" suffix="days" value={pk.turnaround_days} onChange={(v) => set(['design', 'packages', p, 'turnaround_days'], v)} error={err(`design.packages.${p}.turnaround_days`)} />
+                                    <NumInput
+                                        label={`${pk.label} turnaround days`}
+                                        step="1"
+                                        suffix="days"
+                                        value={pk.turnaround_days}
+                                        onChange={(v) => set(['design', 'packages', p, 'turnaround_days'], v)}
+                                        error={err(`design.packages.${p}.turnaround_days`)}
+                                    />
                                 </Field>
-                                <Field label="Description" className="sm:col-span-3">
-                                    <Input value={pk.description ?? ''} onChange={(e) => set(['design', 'packages', p, 'description'], e.target.value)} />
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="sm:mt-7"
+                                    aria-label={`Remove ${pk.label} package`}
+                                    disabled={pkgs.length <= 1}
+                                    onClick={() => removePkg(p)}
+                                >
+                                    <Trash2 />
+                                </Button>
+                                <Field label="Description" className="sm:col-span-4">
+                                    <Input
+                                        value={pk.description ?? ''}
+                                        onChange={(e) => set(['design', 'packages', p, 'description'], e.target.value)}
+                                    />
                                 </Field>
                             </div>
                         );
                     })}
+                    <form
+                        className="flex gap-2 border-t border-border pt-4"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            addPkg();
+                        }}
+                    >
+                        <Input
+                            aria-label="New package name"
+                            placeholder="New package, e.g. Express"
+                            value={newPkg}
+                            onChange={(e) => setNewPkg(e.target.value)}
+                        />
+                        <Button type="submit" variant="secondary" disabled={!slugKey(newPkg) || !!g.packages[slugKey(newPkg)]}>
+                            <Plus /> Add package
+                        </Button>
+                    </form>
                 </CardBody>
             </Card>
             <Card>
@@ -497,7 +717,7 @@ function DesignEditor({ d, set, err }: EditorProps) {
 
 function PreviewCalculator({ draft, products, initialService = 'distribution' }: { draft: CardData; products: Product[]; initialService?: 'distribution' | 'print' | 'design' }) {
     const [svc, setSvc] = useState<'distribution' | 'print' | 'design'>(initialService);
-    const [dz, setDz] = useState({ design_type: 'flyer', package: 'standard', sides: 1, addons: [] as string[] });
+    const [dz, setDz] = useState({ design_type: Object.keys(draft.design.types)[0] ?? '', package: 'standard' in draft.design.packages ? 'standard' : (Object.keys(draft.design.packages)[0] ?? ''), sides: 1, addons: [] as string[] });
     const [dist, setDist] = useState({ coverage: 'houses_units', material: 'standard_dl', houses: '4000', units: '1200' });
     const firstProduct = products.find((p) => p.is_active) ?? products[0];
     const [pr, setPr] = useState({ product_id: firstProduct?.id ?? 0, gsm: firstProduct?.gsm_options[0] ?? 0, sides: 1, quantity: firstProduct?.quantity_options[0] ?? 0, finish: 'matt', addons: [] as string[] });

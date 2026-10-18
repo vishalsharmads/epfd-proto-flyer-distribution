@@ -203,7 +203,7 @@ export default function DesignJob({ order: o, invoice, thread, catalogue, print,
                         <CardHeader title="Package" />
                         <CardBody className="space-y-2 text-sm">
                             <div className="flex items-center gap-3">
-                                <DesignArt type={o.design_type} className="size-11 shrink-0 rounded-[10px] [&>div]:size-7 [&>div]:rounded-[6px] [&_svg]:size-4" />
+                                <DesignArt icon={o.type_icon} className="size-11 shrink-0 rounded-[10px] [&>div]:size-7 [&>div]:rounded-[6px] [&_svg]:size-4" />
                                 <p className="font-medium">{o.name}</p>
                             </div>
                             <p className="flex justify-between"><span className="text-muted">Revisions used</span><span className="tabular">{o.revisions_used} of {o.revisions_unlimited ? 'unlimited' : o.revisions_included}</span></p>

@@ -1,8 +1,8 @@
 import type { PrintOrderT, ProductT } from '@/components/app/types';
 import { cn, money } from '@/lib/utils';
-import { BookOpen, Calendar, CreditCard, FileText, Flag, Gift, Image, Magnet, Mail, Newspaper, Package, Printer, Shirt, StickyNote, Tag, Ticket } from 'lucide-react';
+import { BookOpen, Calendar, CreditCard, FileText, Flag, FolderOpen, Gift, Image, Magnet, Mail, Newspaper, Package, Palette, Printer, Shirt, StickyNote, Tag, Ticket } from 'lucide-react';
 
-/** Icons an admin can give a print category (keep in sync with PrintCategory::ICONS). */
+/** Icons an admin can give a print category or design service (keep in sync with PrintCategory::ICONS). */
 export const CATEGORY_ICONS: Record<string, typeof Printer> = {
     'file-text': FileText,
     'book-open': BookOpen,
@@ -20,6 +20,8 @@ export const CATEGORY_ICONS: Record<string, typeof Printer> = {
     calendar: Calendar,
     shirt: Shirt,
     gift: Gift,
+    'folder-open': FolderOpen,
+    palette: Palette,
 };
 
 export function CategoryIcon({ icon, className }: { icon?: string | null; className?: string }) {

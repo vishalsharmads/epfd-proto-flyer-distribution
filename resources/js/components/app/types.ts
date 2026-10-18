@@ -203,8 +203,9 @@ export interface RunT {
     track?: LngLat[];
 }
 
-export type DesignType = 'flyer' | 'brochure' | 'business_card' | 'presentation_folder' | 'stationery';
-export type DesignPackage = 'basic' | 'standard' | 'premium';
+/** Design service and package keys are admin-managed in the rate card. */
+export type DesignType = string;
+export type DesignPackage = string;
 
 export interface DesignAssetT {
     id: number;
@@ -228,6 +229,8 @@ export interface DesignOrderT {
     reference: string;
     name: string;
     type_label: string;
+    type_icon?: string;
+    package_label?: string;
     status: string;
     step: number;
     design_type: DesignType;
@@ -252,7 +255,9 @@ export interface DesignOrderT {
     subtotal_cents: number;
     gst_cents: number;
     total_cents: number;
-    pricing: (Quote & { meta: { turnaround_days?: number; revisions_included?: number; estimated_first_proof?: string; extra_revision_cents?: number } }) | null;
+    pricing:
+        | (Quote & { meta: { turnaround_days?: number; revisions_included?: number; estimated_first_proof?: string; extra_revision_cents?: number } })
+        | null;
     promo_code: string | null;
     designer: { id: number; name: string } | null;
     print_order_id: number | null;
@@ -271,6 +276,8 @@ export interface DesignTypeOption {
     value: DesignType;
     label: string;
     description: string;
+    icon: string;
+    print_categories: string[];
     sides_option: boolean;
     prices: Record<DesignPackage, number>;
     from_cents: number;

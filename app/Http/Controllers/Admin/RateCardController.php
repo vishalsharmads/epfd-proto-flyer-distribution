@@ -9,6 +9,7 @@ use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Domain\Pricing\RateCardDefaults;
 use App\Exceptions\DomainProblem;
+use App\Models\PrintCategory;
 use App\Models\PrintOption;
 use App\Models\PrintProduct;
 use App\Models\PromoCode;
@@ -37,6 +38,8 @@ class RateCardController extends AdminController
                 'options' => PrintOption::where('print_product_id', $productId)->orderBy('gsm')->orderBy('sides')->orderBy('quantity')->get(['id', 'gsm', 'sides', 'quantity', 'unit_price_hc']),
             ] : null,
             'promos' => PromoCode::latest('id')->get(),
+            'categories' => PrintCategory::orderBy('sort')->orderBy('name')->get(['slug', 'name']),
+            'icons' => PrintCategory::ICONS,
             'tab' => $request->string('tab')->toString() ?: 'distribution',
         ]);
     }
@@ -68,12 +71,33 @@ class RateCardController extends AdminController
             'data.print.addons.*.label' => ['required', 'string', 'max:80'],
             'data.print.addons.*.pct' => ['nullable', 'numeric', 'min:0', 'max:500'],
             'data.print.addons.*.fixed' => ['nullable', 'numeric', 'min:0', 'max:100000'],
-            'data.design' => ['sometimes', 'array'],
+            'data.design' => ['sometimes', 'array', function (string $attribute, mixed $design, \Closure $fail) {
+                $types = (array) ($design['types'] ?? []);
+                $packages = (array) ($design['packages'] ?? []);
+                foreach ([...array_keys($types), ...array_keys($packages)] as $key) {
+                    if (! preg_match('/^[a-z0-9_]{1,40}$/', (string) $key)) {
+                        $fail("“{$key}” is not a valid key (lower-case letters, numbers and underscores).");
+                    }
+                }
+                foreach ($types as $tk => $type) {
+                    foreach (array_keys($packages) as $pk) {
+                        $price = $type['prices'][$pk] ?? null;
+                        if ($price === null || $price === '' || ! is_numeric($price)) {
+                            $fail('Set a price for '.($type['label'] ?? $tk).' — '.($packages[$pk]['label'] ?? $pk).'.');
+                        }
+                    }
+                }
+            }],
             'data.design.double_sided_pct' => ['required_with:data.design', 'numeric', 'min:0', 'max:500'],
             'data.design.rush_turnaround_days' => ['required_with:data.design', 'integer', 'min:1', 'max:30'],
             'data.design.types' => ['required_with:data.design', 'array', 'min:1'],
             'data.design.types.*.label' => ['required', 'string', 'max:80'],
             'data.design.types.*.sides_option' => ['boolean'],
+            'data.design.types.*.description' => ['nullable', 'string', 'max:255'],
+            'data.design.types.*.icon' => ['nullable', Rule::in(PrintCategory::ICONS)],
+            'data.design.types.*.print_categories' => ['nullable', 'array'],
+            'data.design.types.*.print_categories.*' => ['string', Rule::exists('print_categories', 'slug')],
+            'data.design.types.*.default_product' => ['nullable', 'string', Rule::exists('print_products', 'slug')],
             'data.design.types.*.prices' => ['required', 'array'],
             'data.design.types.*.prices.*' => ['required', 'numeric', 'min:0', 'max:100000'],
             'data.design.packages' => ['required_with:data.design', 'array', 'min:1'],
@@ -131,7 +155,12 @@ class RateCardController extends AdminController
             foreach (array_keys($d['design']['packages']) as $pkg) {
                 $prices[$pkg] = (float) ($t['prices'][$pkg] ?? 0);
             }
-            $d['design']['types'][$k] = ['label' => $t['label'], 'sides_option' => filter_var($t['sides_option'] ?? false, FILTER_VALIDATE_BOOL), 'prices' => $prices];
+            $d['design']['types'][$k] = [
+                'label' => $t['label'], 'sides_option' => filter_var($t['sides_option'] ?? false, FILTER_VALIDATE_BOOL), 'prices' => $prices,
+                'description' => (string) ($t['description'] ?? ''), 'icon' => (string) ($t['icon'] ?? 'palette'),
+                'print_categories' => array_values(array_unique(array_map('strval', (array) ($t['print_categories'] ?? [])))),
+                'default_product' => ($t['default_product'] ?? null) ?: null,
+            ];
         }
         foreach ($design['addons'] ?? [] as $k => $a) {
             $d['design']['addons'][$k] = isset($a['pct']) && $a['pct'] !== null && $a['pct'] !== ''

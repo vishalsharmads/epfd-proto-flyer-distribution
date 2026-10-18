@@ -77,7 +77,7 @@ function NumberList({ id, values, onChange, suffix = '', placeholder }: { id: st
     );
 }
 
-export default function PrintProductEdit({ product, categories, finishes, materials }: { product: Product; categories: { slug: string; name: string; is_active: boolean }[]; finishes: Option[]; materials: Option[] }) {
+export default function PrintProductEdit({ product, categories, finishes, materials }: { product: Product; categories: { slug: string; name: string; icon: string; is_active: boolean }[]; finishes: Option[]; materials: Option[] }) {
     const creating = product.id === null;
     const [preview, setPreview] = useState<string | null>(product.image_url);
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -287,7 +287,7 @@ export default function PrintProductEdit({ product, categories, finishes, materi
                     <Card>
                         <CardHeader title="Image" description="Optional. JPG, PNG or WebP up to 4 MB." />
                         <CardBody className="space-y-3">
-                            <ProductArt product={{ width_mm: Number(d.width_mm) || 148, height_mm: Number(d.height_mm) || 210, image_url: preview }} className="aspect-[4/3] rounded-[12px]" />
+                            <ProductArt product={{ width_mm: Number(d.width_mm) || 148, height_mm: Number(d.height_mm) || 210, image_url: preview }} icon={categories.find((c) => c.slug === d.category)?.icon} className="aspect-[4/3] rounded-[12px]" />
                             <Input
                                 type="file"
                                 accept="image/jpeg,image/png,image/webp"
