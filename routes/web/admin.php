@@ -109,6 +109,7 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
         Route::post('print/{product}/toggle', [PrintProductController::class, 'toggle'])->name('print.toggle');
         Route::delete('print/{product}', [PrintProductController::class, 'destroy'])->name('print.destroy');
         Route::post('categories', [PrintCategoryController::class, 'store'])->name('categories.store');
+        Route::post('categories/reorder', [PrintCategoryController::class, 'reorder'])->name('categories.reorder');
         Route::put('categories/{category}', [PrintCategoryController::class, 'update'])->name('categories.update');
         Route::delete('categories/{category}', [PrintCategoryController::class, 'destroy'])->name('categories.destroy');
     });

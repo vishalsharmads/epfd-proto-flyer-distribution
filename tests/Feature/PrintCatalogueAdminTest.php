@@ -151,3 +151,12 @@ it('lets staff add a category and keeps print catalogue admin to catalogue manag
 
     $this->actingAs(staffUser('support'))->get('/admin/catalogue/print')->assertForbidden();
 });
+
+it('saves the category display order', function () {
+    $ids = PrintCategory::orderBy('sort')->pluck('id')->all();
+    $reversed = array_reverse($ids);
+
+    $this->actingAs(staffUser('operations'))->post('/admin/catalogue/categories/reorder', ['ids' => $reversed])->assertSessionHas('success');
+
+    expect(PrintCategory::orderBy('sort')->pluck('id')->all())->toBe($reversed);
+});

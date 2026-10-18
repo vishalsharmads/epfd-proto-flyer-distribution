@@ -34,6 +34,7 @@ class PrintProductController extends AdminController
                 'id' => $p->id, 'slug' => $p->slug, 'name' => $p->name, 'category' => $p->category, 'category_name' => $p->printCategory?->name,
                 'size_label' => $p->size_label, 'width_mm' => $p->width_mm, 'height_mm' => $p->height_mm, 'from_price_cents' => $p->from_price_cents,
                 'image_url' => $p->imageUrl(), 'is_active' => $p->is_active, 'distributable' => $p->distributable, 'sort' => $p->sort,
+                'gsm_options' => array_map('intval', $p->gsm_options), 'sides_options' => $p->sides(), 'quantity_options' => array_map('intval', $p->quantity_options),
                 'unpriced' => (int) ($unpriced[$p->id] ?? 0), 'orders' => (int) ($orders[$p->id] ?? 0),
             ]),
             'categories' => PrintCategory::withCount('products')->orderBy('sort')->orderBy('name')->get(),

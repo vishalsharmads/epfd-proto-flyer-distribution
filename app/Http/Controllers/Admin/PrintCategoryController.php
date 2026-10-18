@@ -8,6 +8,7 @@ use App\Models\PrintCategory;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -29,6 +30,20 @@ class PrintCategoryController extends AdminController
         Audit::log('print_category.updated', $category, ['before' => $before, 'after' => $category->only('slug', 'name', 'icon', 'sort', 'is_active')]);
 
         return back()->with('success', 'Category updated.');
+    }
+
+    /** Save the order categories appear in (ids in display order). */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array', 'min:1'], 'ids.*' => ['integer', 'distinct', Rule::exists('print_categories', 'id')]])['ids'];
+        DB::transaction(function () use ($ids) {
+            foreach (array_values($ids) as $i => $id) {
+                PrintCategory::whereKey($id)->update(['sort' => $i]);
+            }
+        });
+        Audit::log('print_category.reordered', null, ['ids' => array_values($ids)]);
+
+        return back()->with('success', 'Category order saved.');
     }
 
     public function destroy(PrintCategory $category): RedirectResponse

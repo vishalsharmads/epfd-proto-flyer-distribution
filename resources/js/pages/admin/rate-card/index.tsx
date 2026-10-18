@@ -1,8 +1,10 @@
+import { IconPicker } from '@/components/admin/icon-picker';
 import { ConfirmDialog, Table, Td, Th, THead, Tr, useAction } from '@/components/admin/kit';
+import { CategoryIcon } from '@/components/app/print-bits';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Label, Select, Switch } from '@/components/ui/form';
 import { Tabs } from '@/components/ui/navigation';
-import { Dialog, DialogContent } from '@/components/ui/overlay';
+import { Dialog, DialogContent, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlay';
 import { Alert, Badge, Card, CardBody, CardHeader, EmptyState, ErrorState, Skeleton, StatusBadge } from '@/components/ui/surface';
 import AdminLayout from '@/layouts/admin-layout';
 import { api, ApiError, date, dateTime, money, num, perItem, titleCase } from '@/lib/utils';
@@ -454,13 +456,16 @@ function DesignEditor({
                                         <Input value={t.label} onChange={(e) => set(['design', 'types', k, 'label'], e.target.value)} />
                                     </Field>
                                     <Field label="Icon">
-                                        <Select value={t.icon ?? 'palette'} onChange={(e) => set(['design', 'types', k, 'icon'], e.target.value)}>
-                                            {icons.map((i) => (
-                                                <option key={i} value={i}>
-                                                    {i}
-                                                </option>
-                                            ))}
-                                        </Select>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button type="button" variant="secondary" className="h-11 w-full justify-start" aria-label={`${t.label} icon: ${(t.icon ?? 'palette').replace(/-/g, ' ')}`}>
+                                                    <CategoryIcon icon={t.icon ?? 'palette'} className="size-4" /> <span className="truncate capitalize">{(t.icon ?? 'palette').replace(/-/g, ' ')}</span>
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent align="start" className="w-[340px] p-3">
+                                                <IconPicker id={`icon-${k}`} ariaLabel={`${t.label} icon`} value={t.icon ?? 'palette'} onChange={(i) => set(['design', 'types', k, 'icon'], i)} icons={icons} />
+                                            </PopoverContent>
+                                        </Popover>
                                     </Field>
                                     <label className="flex h-11 items-center gap-2 text-sm">
                                         <Switch
