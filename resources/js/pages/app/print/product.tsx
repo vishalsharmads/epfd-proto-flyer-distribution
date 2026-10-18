@@ -8,13 +8,22 @@ import { router } from '@inertiajs/react';
 import { Check, Truck } from 'lucide-react';
 import { useState } from 'react';
 
-const CATS: Record<string, string> = { flyer: 'Flyers', brochure: 'Brochures', magnet: 'Magnets', business_card: 'Business cards', poster: 'Posters', banner: 'Banners', catalogue: 'Catalogues' };
+/** Products arrive in category order (admin-managed); group them under their category name. */
+function groupByCategory(products: ProductT[]) {
+    const groups: { k: string; label: string; items: ProductT[] }[] = [];
+    for (const p of products) {
+        const g = groups.find((x) => x.k === p.category);
+        if (g) g.items.push(p);
+        else groups.push({ k: p.category, label: p.category_name ?? p.category, items: [p] });
+    }
+    return groups;
+}
 
 export default function PrintProduct({ order, products }: { order: PrintOrderT; products: ProductT[] }) {
     const [selected, setSelected] = useState<number | null>(order.product?.id ?? null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const groups = Object.entries(CATS).map(([k, label]) => ({ k, label, items: products.filter((p) => p.category === k) })).filter((g) => g.items.length);
+    const groups = groupByCategory(products);
 
     const choose = async (id: number) => {
         setSelected(id);
@@ -46,6 +55,7 @@ export default function PrintProduct({ order, products }: { order: PrintOrderT; 
                                     <div className="p-4">
                                         <p className="font-medium">{p.name}</p>
                                         <p className="text-xs text-muted">{p.size_label}</p>
+                                        {p.description && <p className="mt-1.5 line-clamp-2 text-xs text-muted">{p.description}</p>}
                                         <p className="mt-2 flex items-center justify-between text-sm">
                                             <span className="font-semibold">{fromPrice(p)}</span>
                                             {p.distributable && (

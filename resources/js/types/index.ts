@@ -44,7 +44,7 @@ export interface SharedProps extends PageProps {
         viewport_min_zoom: number;
     };
     gnaf: { attribution: string; licence_url: string; disclaimer: string; release: string | null };
-    flash: { success: string | null; error: string | null };
+    flash: { success: string | null; error: string | null; warning?: string | null };
     errors: Record<string, string>;
     [key: string]: unknown;
 }

@@ -38,7 +38,8 @@ final class PricingFactory
     {
         return Cache::remember('pricing:print-matrix:'.self::matrixVersion(), 600, function () {
             $out = [];
-            foreach (PrintOption::query()->get(['print_product_id', 'gsm', 'sides', 'quantity', 'unit_price_hc']) as $o) {
+            // Unpriced cells (NULL, new options an admin has not priced yet) are not for sale.
+            foreach (PrintOption::query()->whereNotNull('unit_price_hc')->get(['print_product_id', 'gsm', 'sides', 'quantity', 'unit_price_hc']) as $o) {
                 $out["{$o->print_product_id}|{$o->gsm}|{$o->sides}|{$o->quantity}"] = (int) $o->unit_price_hc;
             }
 

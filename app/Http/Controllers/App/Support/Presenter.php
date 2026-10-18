@@ -172,7 +172,8 @@ final class Presenter
     /** @return array<string, mixed> */
     public static function product(PrintProduct $p): array
     {
-        return $p->only('id', 'slug', 'name', 'category', 'size_label', 'width_mm', 'height_mm', 'bleed_mm', 'from_price_cents', 'gsm_options', 'finish_options', 'quantity_options', 'distributable', 'distribution_material', 'turnaround_days');
+        return $p->only('id', 'slug', 'name', 'description', 'category', 'size_label', 'width_mm', 'height_mm', 'bleed_mm', 'from_price_cents', 'gsm_options', 'finish_options', 'quantity_options', 'distributable', 'distribution_material', 'turnaround_days')
+            + ['sides_options' => $p->sides(), 'image_url' => $p->imageUrl(), 'category_name' => $p->printCategory?->name, 'category_icon' => $p->printCategory?->icon];
     }
 
     /** @return array<string, mixed> */

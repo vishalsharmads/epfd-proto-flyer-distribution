@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Domain\Pricing\RateCardDefaults;
 use App\Models\PickupPoint;
+use App\Models\PrintCategory;
 use App\Models\PrintOption;
 use App\Models\PrintProduct;
 use App\Models\PromoCode;
@@ -16,6 +17,8 @@ use Illuminate\Database\Seeder;
 /**
  * Rate card, print catalogue + price matrix, promo codes and pickup points.
  * Print matrix: per-piece price (ex GST) = from_price × gsm factor × sides factor × quantity factor.
+ * The catalogue is admin-managed (Admin → Print products): existing categories and products are never
+ * overwritten, only missing ones are created.
  */
 class CatalogueSeeder extends Seeder
 {
@@ -35,6 +38,15 @@ class CatalogueSeeder extends Seeder
             RateCard::create(['name' => 'Standard rate card 2026', 'is_active' => true, 'data' => RateCardDefaults::data()]);
         }
 
+        $categories = [
+            ['flyer', 'Flyers', 'file-text'], ['brochure', 'Brochures', 'book-open'], ['magnet', 'Magnets', 'magnet'],
+            ['business_card', 'Business cards', 'credit-card'], ['poster', 'Posters', 'image'], ['banner', 'Banners', 'flag'],
+            ['catalogue', 'Catalogues', 'newspaper'],
+        ];
+        foreach ($categories as $i => [$slug, $name, $icon]) {
+            PrintCategory::firstOrCreate(['slug' => $slug], ['name' => $name, 'icon' => $icon, 'sort' => $i]);
+        }
+
         $products = [
             // slug, name, category, size, w, h, from $/pc, gsm, distributable material, sort
             ['a4-flyers', 'A4 Flyers', 'flyer', '210 × 297 mm', 210, 297, 0.07, [115, 150, 170, 250], 'folded'],
@@ -52,26 +64,26 @@ class CatalogueSeeder extends Seeder
         ];
 
         foreach ($products as $i => [$slug, $name, $cat, $size, $w, $h, $from, $gsms, $material]) {
+            if (PrintProduct::where('slug', $slug)->exists()) {
+                continue;
+            }
             $qtys = $cat === 'banner' ? [1, 2, 5, 10, 20] : ($cat === 'poster' ? [10, 25, 50, 100, 250, 500] : self::QUANTITIES);
+            $sidesOffered = in_array($cat, ['banner', 'magnet'], true) ? [1] : [1, 2];
             $finishes = [];
             foreach ($gsms as $g) {
                 $finishes[(string) $g] = $cat === 'magnet' || $cat === 'banner' ? ['matt'] : self::FINISH_RULES[$g];
             }
-            $p = PrintProduct::updateOrCreate(['slug' => $slug], [
-                'name' => $name, 'category' => $cat, 'size_label' => $size, 'width_mm' => $w, 'height_mm' => $h,
+            $p = PrintProduct::create([
+                'slug' => $slug, 'name' => $name, 'category' => $cat, 'size_label' => $size, 'width_mm' => $w, 'height_mm' => $h,
                 'bleed_mm' => $cat === 'banner' ? 10 : 3,
                 'from_price_cents' => (int) round($from * 100),
-                'gsm_options' => $gsms, 'finish_options' => $finishes, 'quantity_options' => $qtys,
+                'gsm_options' => $gsms, 'sides_options' => $sidesOffered, 'finish_options' => $finishes, 'quantity_options' => $qtys,
                 'distributable' => $material !== null, 'distribution_material' => $material,
                 'turnaround_days' => $cat === 'banner' ? 5 : 3, 'sort' => $i, 'is_active' => true,
             ]);
-            $p->options()->delete();
             $rows = [];
             foreach ($gsms as $g) {
-                foreach ([1, 2] as $sides) {
-                    if (in_array($cat, ['banner', 'magnet'], true) && $sides === 2) {
-                        continue;
-                    }
+                foreach ($sidesOffered as $sides) {
                     foreach ($qtys as $q) {
                         $qf = self::QTY_FACTOR[$q] ?? max(1.0, 3.0 - log10($q) * 0.6);
                         $unit = $from * self::GSM_FACTOR[$g] / self::GSM_FACTOR[$gsms[0]] * ($sides === 2 ? 1.2 : 1.0) * $qf;

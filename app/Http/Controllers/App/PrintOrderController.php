@@ -38,15 +38,15 @@ class PrintOrderController extends Controller
         $business = $request->user()->business;
 
         return Inertia::render('app/print/index', [
-            'orders' => PrintOrder::where('business_id', $business->id)->with('product', 'artworks')->latest('updated_at')->limit(50)->get()->map(fn ($o) => Presenter::printOrder($o)),
-            'products' => PrintProduct::where('is_active', true)->orderBy('sort')->get()->map(fn ($p) => Presenter::product($p)),
+            'orders' => PrintOrder::where('business_id', $business->id)->with('product.printCategory', 'artworks')->latest('updated_at')->limit(50)->get()->map(fn ($o) => Presenter::printOrder($o)),
+            'products' => PrintProduct::forSale()->get()->map(fn ($p) => Presenter::product($p)),
         ]);
     }
 
     public function start(Request $request): Response
     {
         $business = $request->user()->business;
-        $orders = PrintOrder::where('business_id', $business->id)->with('product', 'artworks')->latest('updated_at')->limit(30)->get();
+        $orders = PrintOrder::where('business_id', $business->id)->with('product.printCategory', 'artworks')->latest('updated_at')->limit(30)->get();
 
         return Inertia::render('app/print/start', [
             'drafts' => $orders->where('status', 'draft')->values()->map(fn ($o) => Presenter::printOrder($o)),
@@ -65,7 +65,7 @@ class PrintOrderController extends Controller
             'step' => 2,
         ]);
         if (! empty($data['product_id'])) {
-            $this->applyProduct($order, PrintProduct::findOrFail($data['product_id']));
+            $this->applyProduct($order, PrintProduct::forSale()->findOrFail($data['product_id']));
 
             return redirect()->route('app.print.step', [$order, 'specs']);
         }
@@ -114,8 +114,9 @@ class PrintOrderController extends Controller
 
         return Inertia::render('app/print/'.$step, [
             'order' => Presenter::printOrder($printOrder->fresh()),
-            'products' => $step === 'product' ? PrintProduct::where('is_active', true)->orderBy('sort')->get()->map(fn ($p) => Presenter::product($p)) : null,
+            'products' => $step === 'product' ? PrintProduct::forSale()->get()->map(fn ($p) => Presenter::product($p)) : null,
             'addons' => PrintPricer::addonOptions(),
+            'finishes' => collect(PricingFactory::rateCard()['print']['finishes'] ?? [])->map(fn ($f, $k) => ['value' => (string) $k, 'label' => (string) $f['label']])->values(),
             'payment' => $step === 'confirm' ? Presenter::paymentContext($business) : null,
             'delivery_defaults' => ['name' => $business->contact_name, 'address' => $business->address, 'phone' => $business->mobile],
             'upload' => ['max_mb' => 50, 'mimes' => ['application/pdf', 'image/png', 'image/jpeg']],
@@ -128,7 +129,7 @@ class PrintOrderController extends Controller
         $data = $request->validate([
             'product_id' => ['sometimes', 'integer', 'exists:print_products,id'],
             'gsm' => ['sometimes', 'integer'],
-            'finish' => ['sometimes', 'in:matt,gloss'],
+            'finish' => ['sometimes', 'string', 'max:40'],
             'sides' => ['sometimes', 'in:1,2'],
             'orientation' => ['sometimes', 'in:portrait,landscape'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
@@ -143,7 +144,7 @@ class PrintOrderController extends Controller
 
         $addons = $data['addons'] ?? PrintPricer::addons($printOrder);
         if (isset($data['product_id']) && (int) $data['product_id'] !== $printOrder->print_product_id) {
-            $this->applyProduct($printOrder, PrintProduct::findOrFail($data['product_id']));
+            $this->applyProduct($printOrder, PrintProduct::forSale()->findOrFail($data['product_id']));
             $printOrder->refresh();
         }
         $p = $printOrder->product;
@@ -155,8 +156,12 @@ class PrintOrderController extends Controller
             if (isset($data['quantity']) && ! in_array((int) $data['quantity'], array_map('intval', $p->quantity_options), true)) {
                 $errors['quantity'] = ['Choose one of the listed quantities.'];
             }
-            if (isset($data['sides']) && (int) $data['sides'] === 2 && in_array($p->category, ['banner', 'magnet'], true)) {
-                $errors['sides'] = ['This product is single-sided only.'];
+            if (isset($data['sides']) && ! in_array((int) $data['sides'], $p->sides(), true)) {
+                $errors['sides'] = [$p->sides() === [1] ? 'This product is single-sided only.' : 'This product is double-sided only.'];
+            }
+            $gsm = (int) ($data['gsm'] ?? $printOrder->gsm);
+            if (isset($data['finish']) && ! in_array($data['finish'], $p->finishesFor($gsm), true)) {
+                $errors['finish'] = ['That finish is not available for this paper weight.'];
             }
             if (($data['also_distribute'] ?? false) && ! $p->distributable) {
                 $errors['also_distribute'] = ['This product cannot be letterboxed.'];

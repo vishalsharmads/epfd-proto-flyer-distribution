@@ -45,7 +45,7 @@ function Segment<T extends string | number>({ label, options, value, onChange, t
     );
 }
 
-export default function PrintSpecs({ order: initial, addons }: { order: PrintOrderT; addons: AddonT[] }) {
+export default function PrintSpecs({ order: initial, addons, finishes = [] }: { order: PrintOrderT; addons: AddonT[]; finishes?: { value: string; label: string }[] }) {
     const [o, setO] = useState(initial);
     const [promo, setPromo] = useState(initial.promo_code ?? '');
     const [tierPrices, setTierPrices] = useState<Record<number, number>>({});
@@ -80,7 +80,7 @@ export default function PrintSpecs({ order: initial, addons }: { order: PrintOrd
     const allowedFinishes = (o.gsm && p.finish_options[String(o.gsm)]) || ['matt'];
     const front = o.artworks.find((a) => a.side === 'front') ?? null;
     const back = o.artworks.find((a) => a.side === 'back') ?? null;
-    const singleOnly = ['banner', 'magnet'].includes(p.category);
+    const sidesOffered = p.sides_options?.length ? p.sides_options : [1, 2];
     const setArt = (side: 'front' | 'back', a: ArtworkT | null) => setO((x) => ({ ...x, artworks: [...x.artworks.filter((y) => y.side !== side), ...(a ? [a] : [])] }));
     const missingArt = !front ? 'Upload your front artwork.' : o.sides === 2 && !back ? 'Upload your back artwork.' : null;
     const quote = o.pricing;
@@ -111,10 +111,10 @@ export default function PrintSpecs({ order: initial, addons }: { order: PrintOrd
                             label="Finish"
                             value={o.finish}
                             onChange={(v) => set({ finish: v })}
-                            options={['matt', 'gloss'].map((f) => ({ value: f, label: f === 'matt' ? 'Matt' : 'Gloss', disabled: !allowedFinishes.includes(f), reason: `Not available on ${o.gsm}gsm` }))}
+                            options={finishes.filter((f) => Object.values(p.finish_options).some((list) => list.includes(f.value))).map((f) => ({ value: f.value, label: f.label, disabled: !allowedFinishes.includes(f.value), reason: `Not available on ${o.gsm}gsm` }))}
                         />
                         <div className="grid gap-7 sm:grid-cols-2">
-                            <Segment testPrefix="sides" label="Sides" value={o.sides} onChange={(v) => set({ sides: v })} options={[{ value: 1, label: 'Single-sided' }, { value: 2, label: 'Double-sided', disabled: singleOnly, reason: 'Single-sided only' }]} />
+                            <Segment testPrefix="sides" label="Sides" value={o.sides} onChange={(v) => set({ sides: v })} options={[{ value: 1, label: 'Single-sided', disabled: !sidesOffered.includes(1), reason: 'Double-sided only' }, { value: 2, label: 'Double-sided', disabled: !sidesOffered.includes(2), reason: 'Single-sided only' }]} />
                             <Segment testPrefix="orientation" label="Orientation" value={o.orientation} onChange={(v) => set({ orientation: v })} options={[{ value: 'portrait' as const, label: 'Portrait' }, { value: 'landscape' as const, label: 'Landscape' }]} />
                         </div>
                         <Segment testPrefix="qty" label="Quantity" value={o.quantity} onChange={(v) => set({ quantity: v })} options={p.quantity_options.map((q) => ({ value: q, label: num(q), sub: tierPrices[q] ? `${tierPrices[q] < 100 ? `${(Math.round(tierPrices[q] * 10) / 10).toString()}c` : money(tierPrices[q])}/pc` : ' ' }))} />

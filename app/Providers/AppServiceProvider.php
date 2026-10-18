@@ -28,6 +28,7 @@ use App\Models\Invoice;
 use App\Models\Message;
 use App\Models\Payment;
 use App\Models\PickupPoint;
+use App\Models\PrintCategory;
 use App\Models\PrintOption;
 use App\Models\PrintOrder;
 use App\Models\PrintProduct;
@@ -88,6 +89,7 @@ class AppServiceProvider extends ServiceProvider
             'content_page' => ContentPage::class,
             'campaign_area' => CampaignArea::class,
             'print_product' => PrintProduct::class,
+            'print_category' => PrintCategory::class,
             'print_option' => PrintOption::class,
             'saved_card' => SavedCard::class,
             'saved_area' => SavedArea::class,

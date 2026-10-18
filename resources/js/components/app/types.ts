@@ -90,6 +90,11 @@ export interface ProductT {
     distributable: boolean;
     distribution_material: string | null;
     turnaround_days: number;
+    description?: string | null;
+    sides_options: number[];
+    image_url?: string | null;
+    category_name?: string | null;
+    category_icon?: string | null;
 }
 
 export interface ArtworkT {

@@ -67,7 +67,7 @@ final class PrintPricer
             'print_product_id' => $p->id,
             'gsm' => $gsm,
             'finish' => ((array) ($p->finish_options[(string) $gsm] ?? ['matt']))[0],
-            'sides' => 1,
+            'sides' => $p->sides()[0],
             'orientation' => $p->width_mm > $p->height_mm ? 'landscape' : 'portrait',
             'quantity' => in_array(1000, $qtys, true) ? 1000 : $qtys[intdiv(count($qtys), 2)],
             'also_distribute' => false,

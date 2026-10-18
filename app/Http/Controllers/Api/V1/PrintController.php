@@ -22,6 +22,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 /**
  * @tags Print
@@ -37,13 +38,16 @@ class PrintController extends Controller
      */
     public function products(): JsonResponse
     {
-        $products = PrintProduct::where('is_active', true)->orderBy('sort')->get();
+        $products = PrintProduct::forSale()->get();
 
         return response()->json(['data' => $products->map(fn (PrintProduct $p) => [
             'id' => $p->id,
             'slug' => $p->slug,
             'name' => $p->name,
             'category' => $p->category,
+            'category_name' => $p->printCategory?->name,
+            'description' => $p->description,
+            'image_url' => $p->imageUrl(),
             'size_label' => $p->size_label,
             'width_mm' => $p->width_mm,
             'height_mm' => $p->height_mm,
@@ -62,16 +66,16 @@ class PrintController extends Controller
      */
     public function options(int $product): JsonResponse
     {
-        $p = PrintProduct::where('is_active', true)->findOrFail($product);
+        $p = PrintProduct::forSale()->findOrFail($product);
         $card = PricingFactory::rateCard()['print'] ?? [];
-        $rows = $p->options()->orderBy('gsm')->orderBy('sides')->orderBy('quantity')->get(['gsm', 'sides', 'quantity', 'unit_price_hc']);
+        $rows = $p->options()->whereNotNull('unit_price_hc')->orderBy('gsm')->orderBy('sides')->orderBy('quantity')->get(['gsm', 'sides', 'quantity', 'unit_price_hc']);
 
         return response()->json(['data' => [
             'product_id' => $p->id,
             'gsm' => $p->gsm_options,
             'finishes' => $p->finish_options,
             'finish_surcharges' => collect($card['finishes'] ?? [])->map(fn ($f) => ['label' => $f['label'], 'pct' => $f['pct']]),
-            'sides' => [1, 2],
+            'sides' => $p->sides(),
             'quantities' => $p->quantity_options,
             'addons' => collect($card['addons'] ?? [])->map(fn ($a) => ['label' => $a['label']] + array_intersect_key($a, ['pct' => 1, 'fixed' => 1])),
             'matrix' => $rows->map(fn ($r) => ['gsm' => $r->gsm, 'sides' => $r->sides, 'quantity' => $r->quantity, 'unit_price_hc' => $r->unit_price_hc])->values(),
@@ -84,7 +88,7 @@ class PrintController extends Controller
         $request->validate(['status' => ['nullable', 'in:'.implode(',', PrintOrder::STATUSES)]]);
 
         return PrintOrderResource::collection(
-            $this->business($request)->printOrders()->with('product')
+            $this->business($request)->printOrders()->with('product.printCategory')
                 ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
                 ->latest('id')->paginate($this->perPage($request))
         );
@@ -206,14 +210,14 @@ class PrintController extends Controller
         $s = $creating ? [] : ['sometimes'];
 
         return [
-            'print_product_id' => [...$s, 'required', 'integer', 'exists:print_products,id'],
+            'print_product_id' => [...$s, 'required', 'integer', Rule::exists('print_products', 'id')->where('is_active', true)],
             'gsm' => [...$s, 'nullable', 'integer'],
-            'finish' => [...$s, 'nullable', 'in:matt,gloss'],
+            'finish' => [...$s, 'nullable', 'string', 'max:40'],
             'sides' => [...$s, 'integer', 'in:1,2'],
             'orientation' => [...$s, 'in:portrait,landscape'],
             'quantity' => [...$s, 'nullable', 'integer', 'min:1'],
             'addons' => [...$s, 'nullable', 'array'],
-            'addons.*' => ['string', 'in:express,hard_proof'],
+            'addons.*' => ['string', Rule::in(array_keys((array) (PricingFactory::rateCard()['print']['addons'] ?? [])))],
             'promo_code' => [...$s, 'nullable', 'string', 'max:40'],
             'delivery_name' => [...$s, 'nullable', 'string', 'max:120'],
             'delivery_address' => [...$s, 'nullable', 'string', 'max:255'],
@@ -232,6 +236,12 @@ class PrintController extends Controller
         $order->fill($data);
         $product = $order->print_product_id ? PrintProduct::find($order->print_product_id) : null;
         if ($product && $order->gsm && $order->quantity) {
+            if (! in_array((int) $order->sides, $product->sides(), true)) {
+                throw new DomainProblem('validation_failed', $product->sides() === [1] ? 'This product is single-sided only.' : 'This product is double-sided only.');
+            }
+            if ($order->finish && ! in_array($order->finish, $product->finishesFor((int) $order->gsm), true)) {
+                throw new DomainProblem('validation_failed', 'That finish is not available for this paper weight.');
+            }
             $quote = $pricing->print([
                 'product_id' => $product->id,
                 'product_name' => $product->name,

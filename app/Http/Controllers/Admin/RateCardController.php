@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Catalogue\PrintCatalogue;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Domain\Pricing\RateCardDefaults;
@@ -216,13 +217,20 @@ class RateCardController extends AdminController
         $changed = 0;
         DB::transaction(function () use ($data, $product, &$changed) {
             foreach ($data['cells'] as $c) {
-                $changed += PrintOption::where('print_product_id', $product->id)->whereKey($c['id'])->where('unit_price_hc', '!=', $c['unit_price_hc'])->update(['unit_price_hc' => $c['unit_price_hc']]);
+                $changed += PrintOption::where('print_product_id', $product->id)->whereKey($c['id'])->whereRaw('unit_price_hc IS DISTINCT FROM ?', [$c['unit_price_hc']])->update(['unit_price_hc' => $c['unit_price_hc']]);
             }
         });
         PricingFactory::forgetMatrix();
+        $catalogue = app(PrintCatalogue::class);
+        $catalogue->refreshFromPrice($product);
+        $unpriced = $catalogue->unpricedCount($product);
         Audit::log('print_matrix.saved', null, ['product_id' => $product->id, 'product' => $product->name, 'cells_changed' => $changed]);
 
-        return back()->with('success', "Price matrix saved ({$changed} cell(s) changed).");
+        if ($unpriced > 0) {
+            return back()->with('warning', "Price matrix saved ({$changed} cell(s) changed). {$unpriced} option(s) still need a price before {$product->name} can go on sale.");
+        }
+
+        return back()->with('success', "Price matrix saved ({$changed} cell(s) changed).".($product->is_active ? '' : ' Every option is priced: put it on sale in Print products.'));
     }
 
     // ------------------------------------------------------------------ promo codes

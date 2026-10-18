@@ -49,6 +49,13 @@ export const adminNav: { group: string; items: NavItem[] }[] = [
         ],
     },
     {
+        group: 'Catalogue',
+        items: [
+            { href: '/admin/catalogue/print', label: 'Print products', icon: Printer, permission: 'catalogue.manage' },
+            { href: '/admin/rate-card?tab=design', label: 'Design services', icon: Palette, permission: 'rate_card.manage' },
+        ],
+    },
+    {
         group: 'Finance',
         items: [
             { href: '/admin/rate-card', label: 'Rate card & promos', icon: Calculator, permission: 'rate_card.manage' },

@@ -31,7 +31,7 @@ class PrintOrderController extends Controller
         $request->validate(['status' => ['nullable', 'in:'.implode(',', PrintOrder::STATUSES)], 'business_id' => ['nullable', 'integer']]);
 
         return PrintOrderResource::collection(
-            PrintOrder::with('product')
+            PrintOrder::with('product.printCategory')
                 ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
                 ->when($request->query('business_id'), fn ($q, $b) => $q->where('business_id', $b))
                 ->latest('id')->paginate($this->perPage($request))
@@ -41,7 +41,7 @@ class PrintOrderController extends Controller
     /** Print order detail with artworks. */
     public function show(int $order): JsonResponse
     {
-        return response()->json(['data' => PrintOrderResource::make(PrintOrder::with('product', 'artworks')->findOrFail($order))]);
+        return response()->json(['data' => PrintOrderResource::make(PrintOrder::with('product.printCategory', 'artworks')->findOrFail($order))]);
     }
 
     /** Update production status, vendor and tracking number. */

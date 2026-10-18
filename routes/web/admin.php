@@ -12,7 +12,9 @@ use App\Http\Controllers\Admin\GnafController;
 use App\Http\Controllers\Admin\GnafGuideController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PickupPointController;
+use App\Http\Controllers\Admin\PrintCategoryController;
 use App\Http\Controllers\Admin\PrintOrderController;
+use App\Http\Controllers\Admin\PrintProductController;
 use App\Http\Controllers\Admin\RateCardController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ServiceAreaController;
@@ -95,6 +97,20 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
         Route::get('service-areas/{suburb}', [ServiceAreaController::class, 'show'])->name('service-areas.show');
         Route::post('service-areas/{suburb}/serviced', [ServiceAreaController::class, 'toggle'])->name('service-areas.toggle');
         Route::post('service-areas/{suburb}/recompute', [ServiceAreaController::class, 'recompute'])->name('service-areas.recompute');
+    });
+
+    // Catalogue: print products + categories (prices: Rate card → Print matrix)
+    Route::middleware('permission:catalogue.manage')->prefix('catalogue')->name('catalogue.')->group(function () {
+        Route::get('print', [PrintProductController::class, 'index'])->name('print.index');
+        Route::get('print/create', [PrintProductController::class, 'create'])->name('print.create');
+        Route::post('print', [PrintProductController::class, 'store'])->name('print.store');
+        Route::get('print/{product}/edit', [PrintProductController::class, 'edit'])->name('print.edit');
+        Route::put('print/{product}', [PrintProductController::class, 'update'])->name('print.update');
+        Route::post('print/{product}/toggle', [PrintProductController::class, 'toggle'])->name('print.toggle');
+        Route::delete('print/{product}', [PrintProductController::class, 'destroy'])->name('print.destroy');
+        Route::post('categories', [PrintCategoryController::class, 'store'])->name('categories.store');
+        Route::put('categories/{category}', [PrintCategoryController::class, 'update'])->name('categories.update');
+        Route::delete('categories/{category}', [PrintCategoryController::class, 'destroy'])->name('categories.destroy');
     });
 
     // Rate card, print matrix, promos

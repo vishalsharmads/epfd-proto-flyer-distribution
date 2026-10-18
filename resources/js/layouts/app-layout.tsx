@@ -20,7 +20,8 @@ export function useFlashToasts() {
     useEffect(() => {
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
-    }, [flash?.success, flash?.error]);
+        if (flash?.warning) toast.warning(flash.warning);
+    }, [flash?.success, flash?.error, flash?.warning]);
 }
 
 export default function AppLayout({ title, children, fullBleed = false, hideFooter = false }: { title?: string; children: ReactNode; fullBleed?: boolean; hideFooter?: boolean }) {

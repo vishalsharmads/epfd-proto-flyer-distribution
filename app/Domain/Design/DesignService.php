@@ -365,8 +365,7 @@ final class DesignService
             PrintPricer::applyProduct($print, $product);
             $print->refresh();
 
-            $singleOnly = in_array($product->category, ['banner', 'magnet'], true);
-            $sides = ! $singleOnly && (int) $order->sides === 2 && count($files) >= 2 ? 2 : 1;
+            $sides = in_array(2, $product->sides(), true) && (int) $order->sides === 2 && count($files) >= 2 ? 2 : 1;
             foreach (array_slice($files, 0, $sides) as $i => $asset) {
                 $ext = pathinfo($asset->path, PATHINFO_EXTENSION) ?: 'bin';
                 $path = "artworks/{$print->id}/design-{$order->reference}-".($i === 0 ? 'front' : 'back').".{$ext}";

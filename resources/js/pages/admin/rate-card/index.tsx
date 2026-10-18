@@ -49,7 +49,7 @@ interface Option {
     gsm: number;
     sides: number;
     quantity: number;
-    unit_price_hc: number;
+    unit_price_hc: number | null;
 }
 interface Promo {
     id: number;
@@ -698,7 +698,9 @@ function PreviewCalculator({ draft, products, initialService = 'distribution' }:
 /* ---------------------------------------------------------------- matrix */
 
 function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props['matrix'] }) {
-    const initialCells = () => Object.fromEntries((matrix?.options ?? []).map((o) => [o.id, (o.unit_price_hc / 10000).toFixed(4)]));
+    const fmt = (hc: number | null) => (hc === null ? '' : (hc / 10000).toFixed(4));
+    const initialCells = () => Object.fromEntries((matrix?.options ?? []).map((o) => [o.id, fmt(o.unit_price_hc)]));
+    const hcOf = (v: string | undefined) => (v === undefined || v.trim() === '' ? null : Math.round(parseFloat(v) * 10000));
     // Initialise from props on mount (not only in the effect) so an edit made before the effect runs can't wipe the other cells.
     const [cells, setCells] = useState<Record<number, string>>(initialCells);
     const [pct, setPct] = useState('');
@@ -710,17 +712,19 @@ function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props
     const opts = matrix.options;
     const gsms = Array.from(new Set(opts.map((o) => o.gsm))).sort((a, b) => a - b);
     const qtys = Array.from(new Set(opts.map((o) => o.quantity))).sort((a, b) => a - b);
-    const changed = opts.filter((o) => Math.round(parseFloat(cells[o.id] ?? '0') * 10000) !== o.unit_price_hc);
-    const invalid = opts.some((o) => !(parseFloat(cells[o.id] ?? '') > 0));
+    // Empty cells are unpriced combinations (new options): they can be saved later, but the product stays hidden until all are priced.
+    const changed = opts.filter((o) => hcOf(cells[o.id]) !== o.unit_price_hc && hcOf(cells[o.id]) !== null);
+    const invalid = opts.some((o) => (cells[o.id] ?? '').trim() !== '' && !(parseFloat(cells[o.id]) > 0));
+    const unpriced = opts.filter((o) => hcOf(cells[o.id]) === null).length;
     const adjust = () => {
         const f = 1 + Number(pct) / 100;
         if (!isFinite(f) || f <= 0) return;
-        setCells((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, (parseFloat(v) * f).toFixed(4)])));
+        setCells((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.trim() === '' ? '' : (parseFloat(v) * f).toFixed(4)])));
         setPct('');
     };
     const save = () => {
         setSaving(true);
-        router.put(`/admin/rate-card/matrix/${matrix.product_id}`, { cells: opts.map((o) => ({ id: o.id, unit_price_hc: Math.round(parseFloat(cells[o.id]) * 10000) })) }, { preserveScroll: true, preserveState: true, onFinish: () => (setSaving(false), setConfirm(false)) });
+        router.put(`/admin/rate-card/matrix/${matrix.product_id}`, { cells: changed.map((o) => ({ id: o.id, unit_price_hc: hcOf(cells[o.id]) })) }, { preserveScroll: true, preserveState: true, onFinish: () => (setSaving(false), setConfirm(false)) });
     };
     return (
         <Card>
@@ -745,7 +749,8 @@ function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props
                     </Button>
                     <div className="ml-auto flex items-center gap-2">
                         {changed.length > 0 && <Badge tone="warning">{changed.length} unsaved cell(s)</Badge>}
-                        <Button variant="ghost" disabled={changed.length === 0} onClick={() => setCells(Object.fromEntries(opts.map((o) => [o.id, (o.unit_price_hc / 10000).toFixed(4)])))}>
+                        {unpriced > 0 && <Badge tone="danger">{unpriced} unpriced</Badge>}
+                        <Button variant="ghost" disabled={changed.length === 0} onClick={() => setCells(initialCells())}>
                             Reset
                         </Button>
                         <Button onClick={() => setConfirm(true)} disabled={changed.length === 0 || invalid} data-testid="save-matrix">
@@ -780,12 +785,13 @@ function MatrixEditor({ products, matrix }: { products: Product[]; matrix: Props
                                                             step="0.0001"
                                                             min="0"
                                                             value={cells[o.id] ?? ''}
+                                                            placeholder="Set price"
                                                             aria-invalid={!(parseFloat(cells[o.id] ?? '') > 0) || undefined}
                                                             onChange={(e) => {
                                                                 const v = e.target.value;
                                                                 setCells((c) => ({ ...c, [o.id]: v }));
                                                             }}
-                                                            className={`tabular h-9 min-w-24 text-right ${Math.round(parseFloat(cells[o.id] ?? '0') * 10000) !== o.unit_price_hc ? 'border-warning bg-warning-soft' : ''}`}
+                                                            className={`tabular h-9 min-w-24 text-right ${hcOf(cells[o.id]) !== o.unit_price_hc ? 'border-warning bg-warning-soft' : ''}`}
                                                         />
                                                     ) : (
                                                         <span className="block text-center text-subtle">—</span>

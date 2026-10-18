@@ -26,6 +26,7 @@ class PrintProductFactory extends Factory
             'bleed_mm' => 3,
             'from_price_cents' => 4,
             'gsm_options' => [115, 150],
+            'sides_options' => [1, 2],
             'finish_options' => ['115' => ['gloss'], '150' => ['matt', 'gloss']],
             'quantity_options' => [100, 250, 500, 1000],
             'distributable' => true,

@@ -21,7 +21,7 @@ class RolesSeeder extends Seeder
         'print_orders.view', 'print_orders.manage',
         'design_orders.view', 'design_orders.manage',
         'pickup_points.manage', 'service_areas.manage',
-        'rate_card.manage', 'settings.manage',
+        'rate_card.manage', 'catalogue.manage', 'settings.manage',
         'payments.view', 'payments.refund',
         'reports.view',
         'support.view', 'support.reply',
@@ -36,11 +36,11 @@ class RolesSeeder extends Seeder
         'operations' => [
             'businesses.view', 'businesses.manage', 'campaigns.view', 'campaigns.manage', 'print_orders.view', 'print_orders.manage',
             'design_orders.view', 'design_orders.manage',
-            'pickup_points.manage', 'service_areas.manage', 'support.view', 'support.reply', 'gnaf.view', 'reports.view',
+            'pickup_points.manage', 'service_areas.manage', 'catalogue.manage', 'support.view', 'support.reply', 'gnaf.view', 'reports.view',
         ],
         'finance' => [
             'businesses.view', 'credits.manage', 'campaigns.view', 'print_orders.view', 'payments.view', 'payments.refund',
-            'rate_card.manage', 'reports.view', 'audit.view',
+            'rate_card.manage', 'catalogue.manage', 'reports.view', 'audit.view',
         ],
         'support' => [
             'businesses.view', 'campaigns.view', 'print_orders.view', 'design_orders.view', 'support.view', 'support.reply', 'content.manage',
