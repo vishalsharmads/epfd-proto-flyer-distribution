@@ -77,7 +77,14 @@ function NumberList({ id, values, onChange, suffix = '', placeholder }: { id: st
     );
 }
 
-export default function PrintProductEdit({ product, categories, finishes, materials }: { product: Product; categories: { slug: string; name: string; icon: string; is_active: boolean }[]; finishes: Option[]; materials: Option[] }) {
+type EditProps = { product: Product; categories: { slug: string; name: string; icon: string; is_active: boolean }[]; finishes: Option[]; materials: Option[] };
+
+/** Create and edit share this page: key by product so "Create product" → edit starts from the saved product, not the create form's state. */
+export default function PrintProductPage(props: EditProps) {
+    return <PrintProductEdit key={props.product.id ?? 'new'} {...props} />;
+}
+
+function PrintProductEdit({ product, categories, finishes, materials }: EditProps) {
     const creating = product.id === null;
     const [preview, setPreview] = useState<string | null>(product.image_url);
     const [confirmDelete, setConfirmDelete] = useState(false);
