@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Exceptions\DomainProblem;
+use App\Http\Controllers\HealthController;
 use App\Http\Middleware\EnsureBusinessUser;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -14,6 +15,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Sentry\Laravel\Integration;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -26,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // Readiness check (no session or cookies): database, cache, storage, queue, payment gateway.
+            Route::get('health', HealthController::class)->middleware('throttle:60,1')->name('health');
             Route::middleware('web')->group(base_path('routes/web/app.php'));
             Route::middleware('web')->group(base_path('routes/web/admin.php'));
         },
@@ -49,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['api/v1/webhooks/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        Integration::handles($exceptions); // Sentry, when SENTRY_LARAVEL_DSN is set
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || ($request->expectsJson() && ! $request->header('X-Inertia')),
         );

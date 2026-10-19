@@ -13,6 +13,8 @@
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "sentry/sentry-laravel": "^4.29",
+        "spatie/laravel-backup": "^10.3",
         "spatie/laravel-permission": "^8.3",
         "tightenco/ziggy": "^2.6"
     },

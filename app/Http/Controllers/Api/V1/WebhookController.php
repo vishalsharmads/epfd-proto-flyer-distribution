@@ -63,8 +63,9 @@ class WebhookController extends Controller
         switch ($type) {
             case 'payment.succeeded':
             case 'payment_intent.succeeded':
-                if (in_array($payment->status, ['pending', 'requires_action'], true)) {
-                    // The customer may close the tab after 3-D Secure; the webhook then completes the order.
+                if (in_array($payment->status, ['pending', 'requires_action', 'failed'], true)) {
+                    // The customer may close the tab after 3-D Secure, or finish it after payments:expire-abandoned
+                    // closed the payment. The gateway took the money, so the webhook completes the order.
                     $meta = (array) $payment->meta;
                     app(CheckoutService::class)->complete($payment, ($meta['save_card'] ?? false) ? (array) ($meta['source'] ?? []) : null);
                     Audit::log('webhook.payment_succeeded', $payment);

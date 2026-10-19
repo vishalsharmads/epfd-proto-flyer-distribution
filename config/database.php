@@ -97,6 +97,15 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Backups (spatie/laravel-backup) keep the G-NAF tables' structure but not their ~10 GB of rows:
+            // they are public data, re-imported with `php artisan gnaf:import`.
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', ''),
+                'addExtraOption' => implode(' ', array_map(
+                    fn (string $table) => "--exclude-table-data='{$table}'",
+                    ['addresses', 'act_*', 'nsw_*', 'nt_*', 'ot_*', 'qld_*', 'sa_*', 'tas_*', 'vic_*', 'wa_*'],
+                )),
+            ],
         ],
 
         'sqlsrv' => [
