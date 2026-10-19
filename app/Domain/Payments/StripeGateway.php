@@ -82,6 +82,17 @@ final class StripeGateway implements PaymentGateway
         return new ChargeResult($res->successful(), $res->json('id'), null, null, $res->json('error.message'));
     }
 
+    public function cancel(string $gatewayRef): bool
+    {
+        try {
+            $res = $this->client()->asForm()->post(self::API.'/payment_intents/'.urlencode($gatewayRef).'/cancel', ['cancellation_reason' => 'abandoned']);
+        } catch (ConnectionException) {
+            return false;
+        }
+
+        return $res->successful() && $res->json('status') === 'canceled';
+    }
+
     public function savedMethod(array $source, ChargeResult $charge): array
     {
         $paymentMethod = (string) ($source['payment_method'] ?? '');

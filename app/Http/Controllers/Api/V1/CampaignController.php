@@ -101,7 +101,7 @@ class CampaignController extends Controller
         if (! $model->isDraft()) {
             throw new DomainProblem('conflict', 'Only draft campaigns can be deleted.', 409, 'Conflict');
         }
-        $model->delete();
+        $this->campaigns->deleteDraft($model);
 
         return response()->json(null, 204);
     }
@@ -141,7 +141,7 @@ class CampaignController extends Controller
         if (! $model->isDraft()) {
             throw new DomainProblem('conflict', 'This campaign has already been submitted.', 409, 'Conflict');
         }
-        $this->campaigns->assertReadyForPayment($model);
+        $model = $this->campaigns->prepareForPayment($model);
 
         return response()->json(['data' => [
             'ready' => true,
@@ -159,7 +159,7 @@ class CampaignController extends Controller
     {
         $model = $this->find($request, $campaign);
         if ($model->isDraft()) {
-            $this->campaigns->assertReadyForPayment($model);
+            $model = $this->campaigns->prepareForPayment($model);
         }
         $payment = $checkout->pay($model, $request->user(), $request->checkoutInput());
 

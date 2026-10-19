@@ -188,6 +188,7 @@ export function PaymentForm({
                 card: newCard && !isStripe ? card : null,
                 save_card: method === 'new' && saveCard,
                 use_credits: useCredits,
+                expected_total_cents: totalCents,
                 accept_terms: accept,
                 idempotency_key: idem.current,
                 ...extraPayload,

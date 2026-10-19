@@ -28,7 +28,7 @@ class CampaignWizardController extends Controller
 
     private const STEPS = ['audience' => 2, 'details' => 3, 'confirm' => 4];
 
-    public function __construct(private readonly CampaignService $campaigns) {}
+    public function __construct(private readonly CampaignService $campaigns, private readonly CheckoutService $checkout) {}
 
     public function start(Request $request): Response
     {
@@ -64,7 +64,11 @@ class CampaignWizardController extends Controller
     public function destroy(Campaign $campaign): RedirectResponse
     {
         $this->authorize('delete', $campaign);
-        $campaign->delete();
+        try {
+            $this->campaigns->deleteDraft($campaign);
+        } catch (DomainProblem $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Draft deleted.');
     }
@@ -145,6 +149,8 @@ class CampaignWizardController extends Controller
             return response()->json(['detail' => 'Include houses, units or both.', 'errors' => ['include_houses' => ['Include houses, units or both.']]], 422);
         }
         try {
+            // Outside the transaction: if a pending payment turns out to be paid, completing it must not be rolled back.
+            $this->checkout->releaseForEdit($campaign);
             $campaign = DB::transaction(fn () => $this->campaigns->update($campaign, $data));
         } catch (DomainProblem $e) {
             if ($e->problemCode === 'promo_invalid') {
@@ -172,7 +178,7 @@ class CampaignWizardController extends Controller
     {
         $this->authorize('pay', $campaign);
         try {
-            $this->campaigns->assertReadyForPayment($campaign);
+            $campaign = $this->campaigns->prepareForPayment($campaign);
             $checkout->pay($campaign, $request->user(), $request->checkoutInput());
         } catch (DomainProblem $e) {
             return $this->paymentProblem($e);

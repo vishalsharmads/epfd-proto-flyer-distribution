@@ -38,6 +38,8 @@ class PayRequest extends FormRequest
             'saved_card_id' => ['nullable', 'integer'],
             'save_card' => ['boolean'],
             'use_credits' => ['boolean'],
+            /** The total the customer was shown (cents). When it no longer matches, nothing is charged (409 `price_changed`). */
+            'expected_total_cents' => ['nullable', 'integer', 'min:0'],
             'billing' => ['required', 'array'],
             'billing.company' => ['required', 'string', 'max:120'],
             'billing.abn' => ['nullable', 'string', 'max:14'],
@@ -57,6 +59,7 @@ class PayRequest extends FormRequest
             'saved_card_id' => $data['saved_card_id'] ?? null,
             'save_card' => (bool) ($data['save_card'] ?? false),
             'use_credits' => (bool) ($data['use_credits'] ?? false),
+            'expected_total_cents' => isset($data['expected_total_cents']) ? (int) $data['expected_total_cents'] : null,
             'billing' => $data['billing'],
             'idempotency_key' => $this->header('Idempotency-Key') ?: null,
         ];

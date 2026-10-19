@@ -7,15 +7,16 @@ test.use({ storageState: AUTH.business });
 const RYDALMERE: [number, number] = [151.0325, -33.8135];
 const ERMINGTON: [number, number] = [151.0603, -33.8096];
 
-const isEstimate = (r: { url: () => string; request: () => { method: () => string } }) => r.url().includes('/api/v1/areas/estimate') && r.request().method() === 'POST';
+const isEstimate = (r: { url: () => string; request: () => { method: () => string } }) =>
+    r.url().includes('/api/v1/areas/estimate') && r.request().method() === 'POST';
 
-/** Live stats inside the editing panel must show houses, units and a fee > 0. */
-async function expectLiveStats(page: Page) {
+/** Live stats inside the editing panel must show houses, units and a fee > 0; Done is on unless the area is over the walking limit. */
+async function expectLiveStats(page: Page, { overWalkLimit = false } = {}) {
     const panel = page.getByTestId('editing-panel');
     for (const id of ['stat-houses', 'stat-units', 'stat-fee'] as const) {
         await expect.poll(async () => parseNum(await panel.getByTestId(id).textContent()), { message: `${id} > 0` }).toBeGreaterThan(0);
     }
-    await expect(page.getByTestId('done-button')).toBeEnabled();
+    await expect(page.getByTestId('done-button'))[overWalkLimit ? 'toBeDisabled' : 'toBeEnabled']();
 }
 
 async function finishArea(page: Page, expectedRows: number) {
@@ -63,8 +64,12 @@ test('campaign: three draw modes, details, declined then successful payment', as
     est = page.waitForResponse((r) => isEstimate(r) && r.ok());
     await page.getByRole('option', { name: /Dundas Valley/ }).click();
     await est;
-    await expectLiveStats(page);
-    await finishArea(page, 3);
+    // The whole suburb is longer than one distributor may walk, so Done stays off until it is split.
+    await expectLiveStats(page, { overWalkLimit: true });
+    await page.getByTestId('split-area').click();
+    await expect(page.getByTestId('split-preview')).toBeVisible();
+    await page.getByTestId('apply-split').click();
+    await expect.poll(() => page.getByTestId('area-row').count()).toBeGreaterThan(3);
 
     // Autosave of the three areas, then on to Details.
     await expect(page.getByTestId('wizard-next')).toBeEnabled();

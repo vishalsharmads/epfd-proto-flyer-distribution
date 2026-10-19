@@ -28,7 +28,7 @@ Route::middleware(['auth', 'business'])->prefix('app')->name('app.')->group(func
     Route::post('campaigns', [CampaignWizardController::class, 'store'])->name('campaigns.store');
     Route::post('campaigns/{campaign}/rerun', [CampaignWizardController::class, 'rerun'])->name('campaigns.rerun');
     Route::delete('campaigns/{campaign}', [CampaignWizardController::class, 'destroy'])->name('campaigns.destroy');
-    Route::put('campaigns/{campaign}/areas', [CampaignWizardController::class, 'syncAreas'])->name('campaigns.areas');
+    Route::put('campaigns/{campaign}/areas', [CampaignWizardController::class, 'syncAreas'])->middleware('throttle:estimate')->name('campaigns.areas');
     Route::patch('campaigns/{campaign}', [CampaignWizardController::class, 'update'])->name('campaigns.update');
     Route::post('campaigns/{campaign}/pay', [CampaignWizardController::class, 'pay'])->middleware('throttle:payments')->name('campaigns.pay');
     Route::get('campaigns/{campaign}/{step}', [CampaignWizardController::class, 'step'])->whereIn('step', ['audience', 'details', 'confirm'])->name('campaigns.step');

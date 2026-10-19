@@ -60,6 +60,11 @@ final class MockGateway implements PaymentGateway
         return new ChargeResult(true, 'mock_re_'.Str::random(16));
     }
 
+    public function cancel(string $gatewayRef): bool
+    {
+        return str_starts_with($gatewayRef, 'mock_');
+    }
+
     public function savedMethod(array $source, ChargeResult $charge): array
     {
         return [

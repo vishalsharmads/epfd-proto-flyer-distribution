@@ -27,6 +27,9 @@ interface PaymentGateway
 
     public function refund(string $gatewayRef, int $amountCents): ChargeResult;
 
+    /** Cancel a charge that has not completed, so it can never succeed later. False when it could not be cancelled (e.g. it already succeeded). */
+    public function cancel(string $gatewayRef): bool;
+
     /**
      * Details of the card used for a successful charge, to store as a saved card. Never includes the card number.
      *

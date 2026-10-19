@@ -38,6 +38,8 @@ class PayRequest extends FormRequest
             'card.country' => ['nullable', 'in:AU,NZ,US,UK,CA,IE,SG'],
             'save_card' => ['boolean'],
             'use_credits' => ['boolean'],
+            /** The total the customer was shown (cents). When it no longer matches, nothing is charged (409 `price_changed`). */
+            'expected_total_cents' => ['nullable', 'integer', 'min:0'],
             'accept_terms' => ['accepted'],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
             // print-only acknowledgements (validated by the print controller)
@@ -82,6 +84,7 @@ class PayRequest extends FormRequest
             'saved_card_id' => $d['saved_card_id'] ?? null,
             'save_card' => (bool) ($d['save_card'] ?? false),
             'use_credits' => (bool) ($d['use_credits'] ?? false),
+            'expected_total_cents' => isset($d['expected_total_cents']) ? (int) $d['expected_total_cents'] : null,
             'billing' => ['company' => $d['billing']['company'], 'abn' => Abn::normalise($d['billing']['abn'] ?? null), 'address' => $d['billing']['address']],
             'idempotency_key' => $d['idempotency_key'] ?? null,
         ];

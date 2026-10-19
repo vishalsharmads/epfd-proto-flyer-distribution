@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Campaigns;
 
 use App\Domain\Areas\LetterboxEstimator;
+use App\Domain\Payments\CheckoutService;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Exceptions\DomainProblem;
@@ -25,6 +26,7 @@ final class CampaignService
     public function __construct(
         private readonly LetterboxEstimator $estimator,
         private readonly PricingService $pricing,
+        private readonly CheckoutService $checkout,
     ) {}
 
     public function createDraft(Business $business, User $user, array $attrs = []): Campaign
@@ -77,6 +79,7 @@ final class CampaignService
      */
     public function syncAreas(Campaign $campaign, array $areas): Campaign
     {
+        $this->checkout->releaseForEdit($campaign);
         $pickup = $this->pickupLngLat($campaign);
         $rows = [];
         foreach (array_values($areas) as $i => $area) {
@@ -142,6 +145,7 @@ final class CampaignService
         if (! $campaign->isDraft()) {
             throw new DomainProblem('conflict', 'Only draft campaigns can be edited.', 409);
         }
+        $this->checkout->releaseForEdit($campaign);
         if (isset($attrs['name']) && ! $this->nameAvailable($campaign->business, $attrs['name'], $campaign->id)) {
             throw new DomainProblem('validation_failed', 'You already have a campaign with this name.', 422, extra: ['errors' => ['name' => ['You already have a campaign with this name.']]]);
         }
@@ -169,7 +173,32 @@ final class CampaignService
         return $this->reprice($campaign->fresh());
     }
 
-    /** Validation before payment: name, pickup, ≥1 area with letterboxes, T&Cs handled by caller. */
+    /** Delete a draft, cancelling any payment still waiting on 3-D Secure first. */
+    public function deleteDraft(Campaign $campaign): void
+    {
+        $this->checkout->releaseForEdit($campaign);
+        $campaign->delete();
+    }
+
+    /**
+     * Run just before charging: re-price from the current rate card and promo (never trust the saved total) and
+     * check the campaign is complete. A promo that is no longer valid is reported, not silently dropped.
+     */
+    public function prepareForPayment(Campaign $campaign): Campaign
+    {
+        if ($campaign->promo_code) {
+            try {
+                PricingFactory::promo($campaign->promo_code, 'distribution');
+            } catch (DomainProblem) {
+                throw new DomainProblem('promo_invalid', "The promo code {$campaign->promo_code} is no longer valid. Remove it to continue.", 422, extra: ['errors' => ['promo_code' => ["The promo code {$campaign->promo_code} is no longer valid. Remove it to continue."]]]);
+            }
+        }
+        $campaign = $this->reprice($campaign);
+        $this->assertReadyForPayment($campaign);
+
+        return $campaign;
+    }
+
     /**
      * Message for the first area whose estimated walk is over the per-area limit (Admin → Settings), or null.
      */

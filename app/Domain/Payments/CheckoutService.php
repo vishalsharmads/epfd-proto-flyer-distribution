@@ -35,7 +35,7 @@ final class CheckoutService
 
     /**
      * @param  array{card?: array<string, mixed>|null, payment_method?: string|null, saved_card_id?: int|null, save_card?: bool, use_credits?: bool,
-     *               billing: array{company:string, abn?:string|null, address:string}, idempotency_key?: string|null}  $input
+     *               billing: array{company:string, abn?:string|null, address:string}, idempotency_key?: string|null, expected_total_cents?: int|null}  $input
      */
     public function pay(Campaign|PrintOrder|DesignOrder $payable, User $user, array $input): Payment
     {
@@ -53,6 +53,14 @@ final class CheckoutService
             }
 
             return $existing;
+        }
+        // A new attempt replaces any earlier one still waiting on 3-D Secure (or completes it if the bank approved it).
+        if ($completed = $this->releaseOpenPayments($payable)) {
+            return $completed;
+        }
+        $payable->refresh();
+        if (isset($input['expected_total_cents']) && (int) $input['expected_total_cents'] !== (int) $payable->total_cents) {
+            throw new DomainProblem('price_changed', 'The price has changed since this page loaded. Please review the new total and pay again.', 409, 'Price changed');
         }
         if ($payable->status !== 'draft' || $payable->paid_at !== null) {
             throw new DomainProblem('conflict', 'This job has already been submitted.', 409, 'Already paid');
@@ -131,6 +139,49 @@ final class CheckoutService
         ]);
 
         return $this->complete($payment, $saveCard ? $source : null, $result);
+    }
+
+    /**
+     * Call before changing or deleting an unpaid order. A payment still waiting on 3-D Secure is cancelled at the
+     * gateway so it can no longer succeed for the old order. If the bank had already approved it, the order is
+     * completed instead and a conflict is thrown: the order is paid and can no longer change.
+     */
+    public function releaseForEdit(Campaign|PrintOrder|DesignOrder $payable): void
+    {
+        if ($this->releaseOpenPayments($payable)) {
+            throw new DomainProblem('conflict', 'This order has just been paid, so it can no longer be changed.', 409, 'Already paid');
+        }
+    }
+
+    /** Cancel open 3-D Secure payments for the order; returns the payment if one had in fact succeeded (now completed). */
+    private function releaseOpenPayments(Campaign|PrintOrder|DesignOrder $payable): ?Payment
+    {
+        $open = Payment::where('payable_type', $payable->getMorphClass())->where('payable_id', $payable->getKey())
+            ->where('status', 'requires_action')->get();
+        foreach ($open as $payment) {
+            $gateway = $this->gateways->driver($payment->gateway);
+            if ($gateway->cancel((string) $payment->gateway_ref)) {
+                $payment->forceFill(['status' => 'failed', 'failure_reason' => 'Cancelled because the order changed before payment finished.'])->save();
+                Audit::log('payment.cancelled', $payment);
+
+                continue;
+            }
+            $result = $gateway->retrieve((string) $payment->gateway_ref);
+            if ($result->succeeded) {
+                $meta = (array) $payment->meta;
+
+                return $this->complete($payment, ($meta['save_card'] ?? false) ? (array) ($meta['source'] ?? []) : null, $result);
+            }
+            if (! $result->requiresAction) {
+                $payment->forceFill(['status' => 'failed', 'failure_reason' => $result->failureReason ?? 'Payment was not completed.'])->save();
+
+                continue;
+            }
+
+            throw new DomainProblem('payment_in_progress', 'A payment for this order is still being authorised. Try again in a moment.', 409, 'Payment in progress');
+        }
+
+        return null;
     }
 
     /**
