@@ -127,6 +127,11 @@ describe('Stripe', function () {
         Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/payment_intents')
             && $r['payment_method'] === 'pm_card_visa' && $r['customer'] === 'cus_123' && $r['setup_future_usage'] === 'off_session'
             && $r->hasHeader('Idempotency-Key'));
+        // Pinned to the latest API version, which rejects the removed payment_method_types parameter.
+        Http::assertSent(fn (HttpRequest $r) => $r->header('Stripe-Version') === ['2026-09-30.endive']);
+        Http::assertNotSent(fn (HttpRequest $r) => str_contains(urldecode($r->body()), '&payment_method_types'));
+        Http::assertSent(fn (HttpRequest $r) => str_ends_with($r->url(), '/payment_intents')
+            && str_contains(urldecode($r->body()), 'allowed_payment_method_types[]=card'));
         $payment = Payment::where('payable_id', $order->id)->where('payable_type', 'design_order')->sole();
         expect($payment->gateway)->toBe('stripe')->and($payment->gateway_ref)->toBe('pi_123')->and($payment->card_last4)->toBe('4242')
             ->and(SavedCard::where('business_id', $user->business_id)->where('gateway', 'stripe')->value('exp_year'))->toBe(2031)

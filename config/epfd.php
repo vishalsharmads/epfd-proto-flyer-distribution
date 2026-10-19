@@ -146,6 +146,9 @@ return [
         'gateway' => env('PAYMENT_GATEWAY', 'mock'),
         // Mock gateway: this card number always declines.
         'mock_decline_card' => '4000000000000002',
+        // Every Stripe request pins this API version (header Stripe-Version), so a dashboard account upgrade
+        // cannot change responses under us. Create the webhook endpoint with the same version.
+        'stripe_api_version' => env('STRIPE_API_VERSION', '2026-09-30.endive'),
         'stripe_key' => env('STRIPE_KEY'),
         'stripe_secret' => env('STRIPE_SECRET'),
         'stripe_webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),

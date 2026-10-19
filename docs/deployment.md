@@ -30,6 +30,7 @@ Supporting services:
 6. **G-NAF addresses.** Mount the unzipped release at `GNAF_PATH`, then run `php artisan gnaf:import`. Repeat this each quarter.
 7. **Payments.**
    - In the Stripe dashboard, add the webhook endpoint `https://<APP_URL>/api/v1/webhooks/stripe` with these events: `payment_intent.succeeded`, `payment_intent.payment_failed` and `charge.refunded`.
+   - Create that endpoint with API version `2026-09-30.endive`, the same version the app pins (`STRIPE_API_VERSION`). Webhook payloads use the endpoint's version, not the app's.
    - Open Admin → Payment gateways and enter the publishable key, secret key and webhook signing secret. Alternatively, set `STRIPE_*` in the environment.
    - Click **Test connection**.
    - Open Admin → Settings and set *Payment gateway* to Stripe. It won't switch until the connection test passes.

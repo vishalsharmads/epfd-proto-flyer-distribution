@@ -46,7 +46,8 @@ final class StripeGateway implements PaymentGateway
             'payment_method' => $paymentMethod,
             'confirm' => 'true',
             'description' => $description,
-            'payment_method_types[]' => 'card',
+            // Endive removed payment_method_types; allowed_payment_method_types is its replacement.
+            'allowed_payment_method_types[]' => 'card',
             'expand[]' => 'latest_charge',
         ];
         if ($customer && (isset($source['token']) || $saveForLater)) {
@@ -178,7 +179,9 @@ final class StripeGateway implements PaymentGateway
     private function client(): PendingRequest
     {
         // Only connection failures are retried; every POST carries an Idempotency-Key, so a retry never charges twice.
-        return Http::withToken((string) ($this->credentials['secret_key'] ?? ''))->timeout(20)
+        return Http::withToken((string) ($this->credentials['secret_key'] ?? ''))
+            ->withHeaders(['Stripe-Version' => (string) config('epfd.payments.stripe_api_version')])
+            ->timeout(20)
             ->retry(2, 250, fn ($e) => $e instanceof ConnectionException, throw: false);
     }
 }
