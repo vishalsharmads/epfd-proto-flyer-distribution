@@ -18,7 +18,7 @@ class Payment extends Model
 
     protected function casts(): array
     {
-        return ['billing' => 'array', 'paid_at' => 'datetime'];
+        return ['billing' => 'array', 'meta' => 'array', 'paid_at' => 'datetime'];
     }
 
     public function business(): BelongsTo

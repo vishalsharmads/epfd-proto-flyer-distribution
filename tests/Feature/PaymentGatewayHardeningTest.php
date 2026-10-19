@@ -27,7 +27,7 @@ describe('payment gateway resolution', function () {
         config(['epfd.payments.stripe_secret' => null]);
 
         freshGatewayManager()->driver('stripe');
-    })->throws(RuntimeException::class, 'STRIPE_SECRET');
+    })->throws(RuntimeException::class, 'needs a publishable key, secret key and webhook secret');
 
     it('falls back to mock for unconfigured Stripe outside production', function () {
         config(['epfd.payments.stripe_secret' => null]);
@@ -36,7 +36,7 @@ describe('payment gateway resolution', function () {
     });
 
     it('uses Stripe when it is configured', function () {
-        config(['epfd.payments.stripe_secret' => 'sk_test_x', 'epfd.payments.stripe_webhook_secret' => 'whsec_x']);
+        config(['epfd.payments.stripe_key' => 'pk_test_x', 'epfd.payments.stripe_secret' => 'sk_test_x', 'epfd.payments.stripe_webhook_secret' => 'whsec_x']);
 
         expect(freshGatewayManager()->driver('stripe'))->toBeInstanceOf(StripeGateway::class);
     });

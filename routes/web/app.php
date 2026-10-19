@@ -9,6 +9,7 @@ use App\Http\Controllers\App\DashboardController;
 use App\Http\Controllers\App\DesignOrderController;
 use App\Http\Controllers\App\DocumentController;
 use App\Http\Controllers\App\JobController;
+use App\Http\Controllers\App\PaymentController;
 use App\Http\Controllers\App\PrintOrderController;
 use App\Http\Controllers\App\SupportController;
 use Illuminate\Support\Facades\Route;
@@ -68,6 +69,9 @@ Route::middleware(['auth', 'business'])->prefix('app')->name('app.')->group(func
     Route::post('jobs/{type}/{id}/messages', [JobController::class, 'message'])->whereIn('type', ['campaign', 'print', 'design'])->whereNumber('id')->name('jobs.messages');
     Route::post('jobs/{type}/{id}/rating', [JobController::class, 'rate'])->whereIn('type', ['campaign', 'print'])->whereNumber('id')->name('jobs.rating');
     Route::post('jobs/campaigns/{campaign}/areas/{area}/save', [JobController::class, 'saveArea'])->name('jobs.save-area');
+
+    // 3-D Secure: finish a checkout after the customer authenticated with their bank
+    Route::post('payments/{payment}/confirm', [PaymentController::class, 'confirm'])->middleware('throttle:payments')->name('payments.confirm');
 
     // Documents (PDF)
     Route::get('invoices/{invoice}/pdf', [DocumentController::class, 'invoice'])->name('invoices.pdf');

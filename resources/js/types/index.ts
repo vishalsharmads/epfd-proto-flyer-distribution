@@ -44,7 +44,7 @@ export interface SharedProps extends PageProps {
         viewport_min_zoom: number;
     };
     gnaf: { attribution: string; licence_url: string; disclaimer: string; release: string | null };
-    flash: { success: string | null; error: string | null; warning?: string | null };
+    flash: { success: string | null; error: string | null; warning?: string | null; payment_action?: PaymentAction | null };
     errors: Record<string, string>;
     [key: string]: unknown;
 }
@@ -92,4 +92,11 @@ export interface Paginated<T> {
     per_page: number;
     from: number | null;
     to: number | null;
+}
+
+/** Flashed when a card needs 3-D Secure: authenticate with the gateway SDK, then POST confirm_url. */
+export interface PaymentAction {
+    client_secret: string;
+    confirm_url: string;
+    gateway: string;
 }

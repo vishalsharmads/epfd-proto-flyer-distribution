@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Payments\PaymentGatewayManager;
 use App\Domain\Settings\Settings;
 use App\Domain\Settings\SettingsRegistry;
 use App\Support\Audit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SettingsController extends AdminController
 {
+    public function __construct(private readonly PaymentGatewayManager $gateways) {}
+
     public function show(): Response
     {
         return Inertia::render('admin/settings/index', [
@@ -29,6 +33,10 @@ class SettingsController extends AdminController
             $rules['values.'.$definition['key']] = ['sometimes', ...$definition['rules']];
         }
         $values = $request->validate(['values' => ['required', 'array'], ...$rules])['values'];
+        $gateway = $values['payments']['gateway'] ?? null;
+        if ($gateway && $gateway !== config('epfd.payments.gateway') && ($error = PaymentGatewayController::verify($this->gateways, $gateway))) {
+            throw ValidationException::withMessages(['values.payments.gateway' => $error]);
+        }
 
         $changes = Settings::save($this->flatten($values), $request->user());
         if ($changes) {

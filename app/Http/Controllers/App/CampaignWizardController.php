@@ -175,7 +175,7 @@ class CampaignWizardController extends Controller
             $this->campaigns->assertReadyForPayment($campaign);
             $checkout->pay($campaign, $request->user(), $request->checkoutInput());
         } catch (DomainProblem $e) {
-            return back()->withErrors($this->problemErrors($e));
+            return $this->paymentProblem($e);
         }
 
         return redirect()->route('app.jobs.campaign', $campaign)->with('success', 'Payment received — your campaign has been submitted.');

@@ -48,6 +48,7 @@ final class ProblemJson
         'pricing_unavailable_combination' => [422, 'Print product option combination is not offered.'],
         'promo_invalid' => [422, 'Promo code unknown, expired or not applicable.'],
         'payment_declined' => [402, 'The card was declined by the payment gateway.'],
+        'payment_action_required' => [402, 'The card needs customer authentication (3-D Secure). Complete it with `client_secret` in the browser SDK, then POST `confirm_url`.'],
         'letterbox_source_unavailable' => [503, 'The configured letterbox data source is unavailable.'],
         'invalid_state' => [409, 'The resource is not in a state that allows this action (e.g. run status transition).'],
         'pricing_unknown_addon' => [422, 'Unknown print or design add-on code.'],

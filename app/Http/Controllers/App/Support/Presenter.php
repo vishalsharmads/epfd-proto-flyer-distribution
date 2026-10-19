@@ -6,6 +6,7 @@ namespace App\Http\Controllers\App\Support;
 
 use App\Domain\Campaigns\CampaignService;
 use App\Domain\Design\DesignService;
+use App\Domain\Payments\PaymentGatewayManager;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Models\Artwork;
@@ -326,13 +327,15 @@ final class Presenter
     /** @return array<string, mixed> */
     public static function paymentContext(Business $b): array
     {
+        $gateway = app(PaymentGatewayManager::class)->driver();
+
         return [
-            'saved_cards' => $b->savedCards()->orderByDesc('is_default')->latest()->get()->map(fn ($c) => $c->only('id', 'brand', 'last4', 'exp_month', 'exp_year', 'holder_name', 'is_default'))->all(),
+            'saved_cards' => $b->savedCards()->where('gateway', $gateway->name())->orderByDesc('is_default')->latest()->get()->map(fn ($c) => $c->only('id', 'brand', 'last4', 'exp_month', 'exp_year', 'holder_name', 'is_default'))->all(),
             'credits_cents' => $b->creditBalanceCents(),
             'can_pay' => $b->canPay(),
             'business_status' => $b->status,
             'billing' => self::billing($b),
-            'test_card' => '4242 4242 4242 4242',
+            'gateway' => $gateway->clientConfig(),
         ];
     }
 

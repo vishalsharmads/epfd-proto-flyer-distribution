@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Payments\CheckoutService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentGatewayManager;
 use App\Http\Controllers\Controller;
@@ -62,8 +63,10 @@ class WebhookController extends Controller
         switch ($type) {
             case 'payment.succeeded':
             case 'payment_intent.succeeded':
-                if ($payment->status === 'pending') {
-                    $payment->forceFill(['status' => 'succeeded', 'paid_at' => $payment->paid_at ?? now()])->save();
+                if (in_array($payment->status, ['pending', 'requires_action'], true)) {
+                    // The customer may close the tab after 3-D Secure; the webhook then completes the order.
+                    $meta = (array) $payment->meta;
+                    app(CheckoutService::class)->complete($payment, ($meta['save_card'] ?? false) ? (array) ($meta['source'] ?? []) : null);
                     Audit::log('webhook.payment_succeeded', $payment);
 
                     return 'processed';
@@ -72,7 +75,7 @@ class WebhookController extends Controller
                 return 'noop';
             case 'payment.failed':
             case 'payment_intent.payment_failed':
-                if ($payment->status === 'pending') {
+                if (in_array($payment->status, ['pending', 'requires_action'], true)) {
                     $payment->forceFill(['status' => 'failed', 'failure_reason' => 'Reported failed by gateway webhook.'])->save();
 
                     return 'processed';

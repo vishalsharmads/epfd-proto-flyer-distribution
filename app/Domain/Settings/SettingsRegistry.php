@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Settings;
 
+use App\Domain\Payments\PaymentGatewayManager;
+
 /**
  * Every admin-editable setting: where it lives in config/epfd.php, how it is edited and validated.
  * The config value (env or file) is the default; a saved setting overrides it at boot (see Settings::apply).
@@ -29,6 +31,13 @@ final class SettingsRegistry
                     'classic' => 'MapLibre + OSM + original drawing',
                 ],
                 'rules' => ['required', 'in:terra-google,terra-maplibre,classic'],
+            ],
+            [
+                'key' => 'payments.gateway', 'config' => 'epfd.payments.gateway', 'group' => 'Payments', 'type' => 'select', 'cast' => 'string',
+                'label' => 'Payment gateway',
+                'help' => 'Takes every new card payment. Enter its keys under Payments → Gateways first. Refunds always go back through the gateway that took the payment.',
+                'options' => $gateways = app(PaymentGatewayManager::class)->available(),
+                'rules' => ['required', 'in:'.implode(',', array_keys($gateways))],
             ],
             [
                 'key' => 'areas.max_walk_km', 'config' => 'epfd.areas.max_walk_km', 'group' => 'Areas and runs', 'type' => 'number', 'cast' => 'float', 'unit' => 'km',

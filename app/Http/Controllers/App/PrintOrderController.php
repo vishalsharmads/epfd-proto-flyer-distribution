@@ -278,7 +278,7 @@ class PrintOrderController extends Controller
         try {
             $checkout->pay($printOrder, $request->user(), $request->checkoutInput());
         } catch (DomainProblem $e) {
-            return back()->withErrors($this->problemErrors($e));
+            return $this->paymentProblem($e);
         }
 
         return redirect()->route('app.jobs.print', $printOrder)->with('success', 'Payment received — your print order has been submitted.');

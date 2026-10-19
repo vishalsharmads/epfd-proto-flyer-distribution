@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->name('api.')->group(function () {
     Route::post('design/orders/{order}/request-changes', [DesignController::class, 'requestChanges'])->whereNumber('order')->name('design.orders.request-changes');
 
     Route::get('payments', [BillingController::class, 'payments'])->name('payments.index');
+    Route::post('payments/{payment}/confirm', [BillingController::class, 'confirmPayment'])->whereNumber('payment')->middleware('throttle:payments')->name('payments.confirm');
     Route::get('invoices', [BillingController::class, 'invoices'])->name('invoices.index');
     Route::get('invoices/{invoice}', [BillingController::class, 'invoice'])->whereNumber('invoice')->name('invoices.show');
 

@@ -183,7 +183,7 @@ class DesignOrderController extends Controller
         try {
             $checkout->pay($designOrder, $request->user(), $request->checkoutInput());
         } catch (DomainProblem $e) {
-            return back()->withErrors($this->problemErrors($e));
+            return $this->paymentProblem($e);
         }
 
         return redirect()->route('app.jobs.design', $designOrder)->with('success', 'Payment received — your design brief has been submitted to our studio.');

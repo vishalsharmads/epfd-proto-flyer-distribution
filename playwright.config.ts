@@ -32,7 +32,7 @@ export default defineConfig({
         { name: 'setup', testMatch: /auth\.setup\.ts/ },
         {
             name: 'flows',
-            testMatch: /(register|campaign-draw-modes|print-order|design-order)\.spec\.ts/,
+            testMatch: /(register|campaign-draw-modes|print-order|design-order|payment-3ds)\.spec\.ts/,
             dependencies: ['setup'],
             use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
         },

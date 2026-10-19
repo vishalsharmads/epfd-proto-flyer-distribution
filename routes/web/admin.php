@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\DesignOrderController;
 use App\Http\Controllers\Admin\GnafController;
 use App\Http\Controllers\Admin\GnafGuideController;
 use App\Http\Controllers\Admin\PaymentController;
+use App\Http\Controllers\Admin\PaymentGatewayController;
 use App\Http\Controllers\Admin\PickupPointController;
 use App\Http\Controllers\Admin\PrintCategoryController;
 use App\Http\Controllers\Admin\PrintOrderController;
@@ -175,5 +176,8 @@ Route::middleware(['auth', 'staff'])->prefix('admin')->name('admin.')->group(fun
     Route::middleware('permission:settings.manage')->group(function () {
         Route::get('settings', [SettingsController::class, 'show'])->name('settings.show');
         Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::get('settings/payment-gateways', [PaymentGatewayController::class, 'index'])->name('payment-gateways.index');
+        Route::put('settings/payment-gateways/{driver}', [PaymentGatewayController::class, 'update'])->name('payment-gateways.update');
+        Route::post('settings/payment-gateways/{driver}/test', [PaymentGatewayController::class, 'test'])->name('payment-gateways.test');
     });
 });

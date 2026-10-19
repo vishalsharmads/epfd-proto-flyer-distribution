@@ -109,7 +109,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Super admins bypass every permission check.
         Gate::before(fn (User $user) => $user->hasRole('super_admin') ? true : null);
-        foreach ([Invoice::class, SavedArea::class, SavedCard::class, SupportThread::class] as $businessOwned) {
+        foreach ([Invoice::class, Payment::class, SavedArea::class, SavedCard::class, SupportThread::class] as $businessOwned) {
             Gate::policy($businessOwned, BusinessOwnedPolicy::class);
         }
 

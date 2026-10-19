@@ -146,6 +146,7 @@ return [
         'gateway' => env('PAYMENT_GATEWAY', 'mock'),
         // Mock gateway: this card number always declines.
         'mock_decline_card' => '4000000000000002',
+        'stripe_key' => env('STRIPE_KEY'),
         'stripe_secret' => env('STRIPE_SECRET'),
         'stripe_webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'mock_webhook_secret' => env('MOCK_WEBHOOK_SECRET'),

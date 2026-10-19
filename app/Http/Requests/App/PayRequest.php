@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\App;
 
+use App\Domain\Payments\PaymentGatewayManager;
 use App\Rules\Abn;
 use Illuminate\Foundation\Http\FormRequest;
 
-/** Shared checkout payload for campaigns and print orders. Card data is never logged or stored raw. */
+/**
+ * Shared checkout payload for campaigns, print and design orders. A new card arrives as a gateway
+ * `payment_method` id tokenised in the browser; raw card fields are only accepted by the mock gateway.
+ */
 class PayRequest extends FormRequest
 {
     public function authorize(): bool
@@ -18,9 +22,11 @@ class PayRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $newCard = 'required_without:saved_card_id';
+        $mock = app(PaymentGatewayManager::class)->getDefaultDriver() === 'mock';
+        $newCard = $mock ? 'required_without_all:saved_card_id,payment_method' : 'prohibited';
 
         return [
+            'payment_method' => ['nullable', 'string', 'max:255', 'regex:/^pm_[A-Za-z0-9_]+$/'],
             'billing.company' => ['required', 'string', 'max:160'],
             'billing.abn' => ['nullable', new Abn],
             'billing.address' => ['required', 'string', 'max:255'],
@@ -46,7 +52,8 @@ class PayRequest extends FormRequest
         return [
             'accept_terms.accepted' => 'Please accept the Terms & Conditions, Community Guidelines and Privacy Policy.',
             'card.exp.regex' => 'Enter the expiry as MM/YY.',
-            'card.number.required_without' => 'Enter a card number or choose a saved card.',
+            'card.number.required_without_all' => 'Enter a card number or choose a saved card.',
+            'card.*.prohibited' => 'Card details must be entered in the secure card form.',
             'billing.company.required' => 'Enter the company name for the invoice.',
             'billing.address.required' => 'Enter the billing address.',
         ];
@@ -71,6 +78,7 @@ class PayRequest extends FormRequest
 
         return [
             'card' => $card,
+            'payment_method' => $d['payment_method'] ?? null,
             'saved_card_id' => $d['saved_card_id'] ?? null,
             'save_card' => (bool) ($d['save_card'] ?? false),
             'use_credits' => (bool) ($d['use_credits'] ?? false),
