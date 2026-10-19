@@ -85,6 +85,34 @@ export function selfIntersects(ring: LngLat[]): boolean {
     return false;
 }
 
+/** ~1 m in degrees: closer points add nothing to a letterbox area and confuse the crossing checks. */
+const MIN_STEP = 0.00001;
+
+/**
+ * Remove points within ~1 m of the previous one and spikes where the outline doubles straight back.
+ * Areas cut along suburb borders could carry both, which the editor reads as the outline crossing itself.
+ */
+export function tidyRing(ring: LngLat[]): LngLat[] {
+    let out = ring.filter((p, i) => i === 0 || Math.hypot(p[0] - ring[i - 1][0], p[1] - ring[i - 1][1]) >= MIN_STEP);
+    while (out.length > 3 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) < MIN_STEP) out = out.slice(0, -1);
+    for (let changed = true; changed && out.length > 3;) {
+        changed = false;
+        for (let i = 0; i < out.length && out.length > 3; i++) {
+            const a = out[(i - 1 + out.length) % out.length],
+                b = out[i],
+                c = out[(i + 1) % out.length];
+            const v1 = [a[0] - b[0], a[1] - b[1]],
+                v2 = [c[0] - b[0], c[1] - b[1]];
+            const cos = (v1[0] * v2[0] + v1[1] * v2[1]) / (Math.hypot(v1[0], v1[1]) * Math.hypot(v2[0], v2[1]) || 1);
+            if (cos > 0.9999) {
+                out = [...out.slice(0, i), ...out.slice(i + 1)];
+                changed = true;
+            }
+        }
+    }
+    return out;
+}
+
 /** Signed planar area (deg²); used for centroid. */
 function signedArea(ring: LngLat[]): number {
     let a = 0;

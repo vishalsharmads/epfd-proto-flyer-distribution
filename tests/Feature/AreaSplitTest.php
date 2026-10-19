@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Areas\AreaSplitter;
 use App\Domain\Areas\LetterboxEstimator;
 use App\Support\Geo;
+use Illuminate\Support\Facades\DB;
 
 /** Richmond VIC: the densest part of the local G-NAF sample (~1 km × 0.8 km). */
 function richmondPolygon(): array
@@ -47,4 +48,22 @@ it('splits through the API with a quote per piece', function () {
         ->assertOk()
         ->assertJsonPath('max_walk_km', 1)
         ->assertJsonStructure(['pieces' => [['name', 'geometry' => ['type', 'coordinates'], 'estimate' => ['houses', 'units', 'distance_km'], 'quote']]]);
+});
+
+it('returns pieces the map editor accepts: no repeated or sub-metre points, outline never touches itself', function () {
+    $whole = app(LetterboxEstimator::class)->estimate(richmondPolygon(), true, true)['estimate'];
+    config(['epfd.areas.max_walk_km' => max(1.0, round($whole->distanceKm / 4, 1)), 'epfd.areas.split_min_letterboxes' => 20]);
+
+    $pieces = app(AreaSplitter::class)->split(richmondPolygon(), true, true, 'Richmond');
+
+    expect(count($pieces))->toBeGreaterThan(2);
+    foreach ($pieces as $piece) {
+        $ring = $piece['geometry']['coordinates'][0];
+        for ($i = 1; $i < count($ring); $i++) {
+            // ~1 m: cutting along borders used to leave centimetre stubs the editor reads as a crossing.
+            expect(hypot($ring[$i][0] - $ring[$i - 1][0], $ring[$i][1] - $ring[$i - 1][1]))->toBeGreaterThanOrEqual(0.00001);
+        }
+        $simple = DB::selectOne('SELECT ST_IsSimple(ST_ExteriorRing(ST_GeomFromGeoJSON(?))) AS ok', [json_encode($piece['geometry'])])->ok;
+        expect($simple)->toBeTrue();
+    }
 });

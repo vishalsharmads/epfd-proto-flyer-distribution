@@ -1,7 +1,9 @@
 import type { LngLat } from '@/types';
 import { useEffect, useRef } from 'react';
 import { TerraDraw, TerraDrawFreehandMode, TerraDrawPolygonMode, TerraDrawSelectMode, type GeoJSONStoreFeatures, type HexColor } from 'terra-draw';
+import { toast } from 'sonner';
 import { simplifyTrace, untangleTrace } from '../geometry/douglasPeucker';
+import { tidyRing } from '../geometry/polygon';
 import type { MapProvider } from '../providers';
 import type { Phase } from './DrawOverlay';
 
@@ -26,7 +28,13 @@ function ringOf(f: GeoJSONStoreFeatures | undefined): LngLat[] {
 
 /** Same clean-up as the SVG overlay's trace: simplify in screen pixels, cap vertices, remove self-crossings. */
 function cleanTrace(provider: MapProvider, points: LngLat[]): LngLat[] {
-    const px = untangleTrace(simplifyTrace(points.map((p) => provider.project(p)), 5, MAX_VERTICES));
+    const px = untangleTrace(
+        simplifyTrace(
+            points.map((p) => provider.project(p)),
+            5,
+            MAX_VERTICES,
+        ),
+    );
     return px.length >= 3 ? px.map((q) => provider.unproject(q)) : [];
 }
 
@@ -61,18 +69,34 @@ export function TerraDrawLayer({ provider, phase, points, color, onPointsChange,
     const pointsRef = useRef(points);
     pointsRef.current = points;
 
-    /** Put `pts` on the map as the one editable feature and select it. */
+    /**
+     * Put `pts` on the map as the one editable feature and select it. Terra Draw refuses outlines it reads as
+     * crossing themselves, which left the pins impossible to drag: tidy the outline first (drop sub-metre points
+     * and spikes), then fall back to a light on-screen simplification, and say so if it still cannot be edited.
+     */
     const showEditable = (draw: TerraDraw, pts: LngLat[]) => {
         draw.clear();
         featureId.current = null;
         if (pts.length < 3) return;
         draw.setMode('select');
-        const [res] = draw.addFeatures([{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [[...pts, pts[0]]] }, properties: { mode: 'polygon' } }]);
-        if (res?.valid) {
+        const add = (ring: LngLat[]) =>
+            ring.length >= 3
+                ? draw.addFeatures([
+                      { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[...ring, ring[0]]] }, properties: { mode: 'polygon' } },
+                  ])[0]
+                : undefined;
+        const candidates = [tidyRing(pts), cleanTrace(provider, tidyRing(pts))];
+        for (const ring of candidates) {
+            const res = add(ring);
+            if (!res?.valid) continue;
             featureId.current = res.id as string | number;
             draw.selectFeature(res.id as string | number);
+            lastEmitted.current = ring;
+            if (!same(ring, pts)) cb.current.onPointsChange(ring); // keep the tidied outline (and re-estimate it)
+            return;
         }
         lastEmitted.current = pts;
+        toast.error("This area's outline can't be edited. Delete it and draw it again.");
     };
 
     const applyPhase = (draw: TerraDraw) => {
@@ -103,7 +127,15 @@ export function TerraDrawLayer({ provider, phase, points, color, onPointsChange,
             draw = new TerraDraw({
                 adapter,
                 modes: [
-                    new TerraDrawPolygonMode({ styles: { ...style, closingPointColor: hex, closingPointWidth: 7, closingPointOutlineColor: '#ffffff', closingPointOutlineWidth: 2 } }),
+                    new TerraDrawPolygonMode({
+                        styles: {
+                            ...style,
+                            closingPointColor: hex,
+                            closingPointWidth: 7,
+                            closingPointOutlineColor: '#ffffff',
+                            closingPointOutlineWidth: 2,
+                        },
+                    }),
                     new TerraDrawFreehandMode({ drawInteraction: 'click-drag', styles: style }),
                     new TerraDrawSelectMode({
                         flags: { polygon: editable },
@@ -172,6 +204,7 @@ export function TerraDrawLayer({ provider, phase, points, color, onPointsChange,
         const draw = drawRef.current;
         if (!draw?.enabled || phase !== 'editing' || same(points, lastEmitted.current)) return;
         showEditable(draw, points);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [points, phase]);
 
     return null;

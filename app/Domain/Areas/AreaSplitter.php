@@ -133,19 +133,28 @@ final class AreaSplitter
     }
 
     /**
-     * Make a piece acceptable to PolygonValidator: one polygon, no holes, at most max_vertices vertices.
+     * Make a piece acceptable to PolygonValidator and to the map editor: one polygon, no holes, at most
+     * max_vertices vertices, and a simple outline at the precision it is saved with (7 decimals).
+     *
+     * Cutting along suburb borders and Voronoi cells leaves repeated points and centimetre-long stubs. PostGIS
+     * accepts those as valid, but the editor (and Terra Draw) see the stubs as the outline crossing itself and
+     * refuse to edit the area. Pieces are simplified to ~1 m (points closer than that merge; no letterbox area needs
+     * finer detail) and the outline must be simple.
      *
      * @return array<string, mixed>|null
      */
     private function clean(string $geojson): ?array
     {
         $max = (int) config('epfd.areas.max_vertices', 500);
-        foreach ([0.0, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001] as $tolerance) {
+        foreach ([0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001] as $tolerance) {
             $row = DB::selectOne('
                 WITH g AS (SELECT ST_MakePolygon(ST_ExteriorRing(ST_SetSRID(ST_GeomFromGeoJSON(?), 7844))) AS g),
-                s AS (SELECT CASE WHEN ?::float8 > 0 THEN ST_SimplifyPreserveTopology(g, ?::float8) ELSE g END AS g FROM g)
-                SELECT ST_AsGeoJSON(g, 7) AS gj, ST_NPoints(g) AS n, ST_IsValid(g) AS ok FROM s WHERE NOT ST_IsEmpty(g)
-            ', [$geojson, $tolerance, $tolerance]);
+                s AS (SELECT ST_SimplifyPreserveTopology(g, ?::float8) AS g FROM g),
+                c AS (SELECT ST_RemoveRepeatedPoints(ST_SnapToGrid(g, 0.0000001), 0.00001) AS g FROM s)
+                SELECT ST_AsGeoJSON(g, 7) AS gj, ST_NPoints(g) AS n,
+                       ST_IsValid(g) AND ST_IsSimple(ST_ExteriorRing(g)) AS ok
+                FROM c WHERE NOT ST_IsEmpty(g) AND GeometryType(g) = \'POLYGON\'
+            ', [$geojson, $tolerance]);
             if ($row && $row->ok && $row->n - 1 <= $max) {
                 return json_decode((string) $row->gj, true);
             }
