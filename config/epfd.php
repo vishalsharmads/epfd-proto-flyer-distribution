@@ -139,7 +139,7 @@ return [
         'mock_decline_card' => '4000000000000002',
         'stripe_secret' => env('STRIPE_SECRET'),
         'stripe_webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-        'mock_webhook_secret' => env('MOCK_WEBHOOK_SECRET', 'mock-webhook-secret'),
+        'mock_webhook_secret' => env('MOCK_WEBHOOK_SECRET'),
     ],
 
     'licence' => [

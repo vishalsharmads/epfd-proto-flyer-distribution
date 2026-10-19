@@ -27,6 +27,7 @@
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_DATABASE" value="epfd_test"/>
         <env name="PAYMENT_GATEWAY" value="mock"/>
+        <env name="MOCK_WEBHOOK_SECRET" value="mock-webhook-secret"/>
         <env name="LETTERBOX_SOURCE" value="gnaf"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>

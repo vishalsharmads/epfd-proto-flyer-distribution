@@ -8,9 +8,8 @@ use App\Domain\Areas\GeoscapeBuildingsLetterboxSource;
 use App\Domain\Areas\GnafLetterboxSource;
 use App\Domain\Areas\LetterboxSource;
 use App\Domain\Gnaf\AddressClassifier;
-use App\Domain\Payments\MockGateway;
 use App\Domain\Payments\PaymentGateway;
-use App\Domain\Payments\StripeGateway;
+use App\Domain\Payments\PaymentGatewayManager;
 use App\Domain\Pricing\PricingFactory;
 use App\Domain\Pricing\PricingService;
 use App\Domain\Settings\Settings;
@@ -59,9 +58,8 @@ class AppServiceProvider extends ServiceProvider
             default => $app->make(GnafLetterboxSource::class),
         });
         $this->app->scoped(PricingService::class, fn () => PricingFactory::make());
-        $this->app->singleton(PaymentGateway::class, fn () => config('epfd.payments.gateway') === 'stripe' && config('epfd.payments.stripe_secret')
-            ? new StripeGateway
-            : new MockGateway);
+        $this->app->singleton(PaymentGatewayManager::class, fn ($app) => new PaymentGatewayManager($app));
+        $this->app->singleton(PaymentGateway::class, fn ($app) => $app->make(PaymentGatewayManager::class)->driver());
     }
 
     public function boot(): void

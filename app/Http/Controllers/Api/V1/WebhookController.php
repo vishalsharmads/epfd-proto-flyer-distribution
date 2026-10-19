@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domain\Payments\MockGateway;
 use App\Domain\Payments\PaymentGateway;
-use App\Domain\Payments\StripeGateway;
+use App\Domain\Payments\PaymentGatewayManager;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Support\Audit;
@@ -14,6 +13,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * @tags Webhooks
@@ -100,10 +100,10 @@ class WebhookController extends Controller
 
     private function gateway(string $name): PaymentGateway
     {
-        return match ($name) {
-            'mock' => new MockGateway,
-            'stripe' => new StripeGateway,
-            default => abort(404, 'Unknown gateway.'),
-        };
+        try {
+            return app(PaymentGatewayManager::class)->find($name) ?? abort(404, 'Unknown gateway.');
+        } catch (RuntimeException) {
+            abort(404, 'Unknown gateway.');
+        }
     }
 }

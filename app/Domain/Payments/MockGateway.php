@@ -61,8 +61,8 @@ final class MockGateway implements PaymentGateway
 
     public function parseWebhook(string $payload, ?string $signature): array
     {
-        $expected = hash_hmac('sha256', $payload, (string) config('epfd.payments.mock_webhook_secret'));
-        if (! $signature || ! hash_equals($expected, $signature)) {
+        $secret = (string) config('epfd.payments.mock_webhook_secret');
+        if ($secret === '' || ! $signature || ! hash_equals(hash_hmac('sha256', $payload, $secret), $signature)) {
             throw new DomainProblem('webhook_signature_invalid', 'Invalid webhook signature.', 400, 'Bad webhook');
         }
         $data = json_decode($payload, true);
