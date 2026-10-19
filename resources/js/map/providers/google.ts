@@ -39,6 +39,8 @@ export class GoogleProvider implements MapProvider {
     ready: Promise<void>;
     private map: any = null;
     private overlay: any = null;
+    /** Called on every OverlayView.draw(): Google redraws overlays each frame of a zoom animation, but fires no camera events then. */
+    private frameListeners = new Set<() => void>();
     private container: HTMLElement;
     private labels = true;
     private streets = true;
@@ -60,10 +62,14 @@ export class GoogleProvider implements MapProvider {
                         gestureHandling: 'greedy',
                         styles: greyStyles(dark, true, true),
                     });
-                    // An empty OverlayView gives us a projection for container pixel <-> lat/lng.
+                    // An empty OverlayView gives us a projection for container pixel <-> lat/lng, and its draw()
+                    // runs on every frame of a zoom animation, so our overlays can follow the tiles smoothly.
                     const ov = new g.OverlayView();
                     ov.onAdd = () => undefined;
-                    ov.draw = () => resolve();
+                    ov.draw = () => {
+                        resolve();
+                        this.frameListeners.forEach((f) => f());
+                    };
                     ov.onRemove = () => undefined;
                     ov.setMap(this.map);
                     this.overlay = ov;
@@ -145,11 +151,14 @@ export class GoogleProvider implements MapProvider {
             } else {
                 const name = event === 'moveend' ? 'idle' : event === 'zoom' ? 'zoom_changed' : 'bounds_changed';
                 l = g.event.addListener(this.map, name, () => (cb as () => void)());
+                // bounds_changed covers dragging; zoom animations only show up as draw() frames.
+                if (event === 'move' || event === 'zoom') this.frameListeners.add(cb as () => void);
             }
         });
         return () => {
             cancelled = true;
             l?.remove();
+            this.frameListeners.delete(cb as () => void);
         };
     }
     native(): unknown {
@@ -160,6 +169,7 @@ export class GoogleProvider implements MapProvider {
         /* Google maps resize automatically with their container. */
     }
     destroy() {
+        this.frameListeners.clear();
         this.overlay?.setMap(null);
         this.container.innerHTML = '';
         this.map = null;
