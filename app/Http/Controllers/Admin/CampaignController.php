@@ -60,6 +60,7 @@ class CampaignController extends AdminController
 
         return Inertia::render('admin/campaigns/show', [
             'campaign' => $campaign,
+            'can_simulate_gps' => ! app()->isProduction(),
             'areas' => $areas,
             'boundary' => $boundary ? json_decode($boundary, true) : null,
             'runs' => $runs->map(fn (Run $r) => array_merge($r->toArray(), ['geometry' => $r->geoJson()])),
@@ -163,6 +164,7 @@ class CampaignController extends AdminController
 
     public function simulateRun(Run $run): RedirectResponse
     {
+        abort_if(app()->isProduction(), 404);
         $result = null;
         $resp = $this->attempt(function () use ($run, &$result) {
             $result = $this->runs->simulateGps($run);

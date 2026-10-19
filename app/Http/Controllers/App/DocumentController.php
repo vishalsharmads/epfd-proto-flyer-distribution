@@ -18,7 +18,7 @@ class DocumentController extends Controller
 
     public function invoice(Request $request, Invoice $invoice): Response
     {
-        abort_unless($invoice->business_id === $request->user()->business_id, 403);
+        $this->authorize('view', $invoice);
 
         return Documents::invoicePdf($invoice)->download("{$invoice->number}.pdf");
     }

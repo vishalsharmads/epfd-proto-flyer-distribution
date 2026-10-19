@@ -32,6 +32,7 @@ interface Run {
     geometry: GeoJsonPolygon;
 }
 interface Props {
+    can_simulate_gps: boolean;
     campaign: {
         id: number;
         reference: string;
@@ -236,7 +237,7 @@ export default function CampaignShow(props: Props) {
                                                                         {ADVANCE_LABEL[s]}
                                                                     </DropdownItem>
                                                                 ))}
-                                                                {['in_delivery', 'completed'].includes(r.status) && (
+                                                                {props.can_simulate_gps && ['in_delivery', 'completed'].includes(r.status) && (
                                                                     <DropdownItem data-testid="simulate-gps" onSelect={() => setConfirm({ title: `Simulate GPS for ${r.reference}?`, description: `Generates a walk along the G-NAF address points inside this run (one fix every 15 s) and computes coverage within 25 m.${r.gps_points_count ? ' Existing GPS points are replaced.' : ''}`, label: 'Simulate GPS', method: 'post', url: `/admin/runs/${r.id}/simulate-gps`, testId: 'simulate-gps' })}>
                                                                         <Navigation className="size-4" /> Simulate GPS
                                                                     </DropdownItem>

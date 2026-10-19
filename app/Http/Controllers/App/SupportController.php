@@ -47,7 +47,7 @@ class SupportController extends Controller
 
     public function show(Request $request, SupportThread $thread): Response
     {
-        abort_unless($thread->business_id === $request->user()->business_id, 403);
+        $this->authorize('view', $thread);
         $related = null;
         if ($thread->related_type && $thread->related) {
             $r = $thread->related;
@@ -59,7 +59,7 @@ class SupportController extends Controller
 
     public function reply(Request $request, SupportThread $thread): RedirectResponse
     {
-        abort_unless($thread->business_id === $request->user()->business_id, 403);
+        $this->authorize('update', $thread);
         $data = $request->validate(['body' => ['required', 'string', 'min:2', 'max:4000']], ['body.required' => 'Write a message first.']);
         $thread->messages()->create(['user_id' => $request->user()->id, 'from_staff' => false, 'body' => $data['body']]);
         $thread->forceFill(['last_message_at' => now(), 'status' => 'open'])->save();

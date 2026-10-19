@@ -28,6 +28,15 @@ return [
     ],
 
     'timezone' => 'Australia/Sydney',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Proxies
+    |--------------------------------------------------------------------------
+    | Behind a load balancer or CDN, list its addresses (comma separated, CIDR ok) or "*"
+    | when only the proxy can reach the app. Without this, HTTPS and client IPs are not detected.
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
     'currency' => 'AUD',
     'gst_rate' => 0.10,
 

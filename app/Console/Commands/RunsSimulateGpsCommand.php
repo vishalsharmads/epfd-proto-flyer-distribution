@@ -22,6 +22,11 @@ class RunsSimulateGpsCommand extends Command
 
     public function handle(RunService $runs): int
     {
+        if ($this->laravel->isProduction()) {
+            $this->error('Simulated GPS would fake proof of delivery, so it is disabled in production.');
+
+            return self::FAILURE;
+        }
         $arg = $this->argument('run');
         $query = Run::query();
         if ($arg) {

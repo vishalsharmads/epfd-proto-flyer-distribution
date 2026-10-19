@@ -82,7 +82,7 @@ class AccountController extends Controller
 
     public function deleteCard(Request $request, SavedCard $card): RedirectResponse
     {
-        abort_unless($card->business_id === $request->user()->business_id, 403);
+        $this->authorize('delete', $card);
         $wasDefault = $card->is_default;
         $card->delete();
         if ($wasDefault) {
@@ -94,7 +94,7 @@ class AccountController extends Controller
 
     public function defaultCard(Request $request, SavedCard $card): RedirectResponse
     {
-        abort_unless($card->business_id === $request->user()->business_id, 403);
+        $this->authorize('update', $card);
         DB::transaction(function () use ($card) {
             SavedCard::where('business_id', $card->business_id)->update(['is_default' => false]);
             $card->update(['is_default' => true]);
@@ -105,7 +105,7 @@ class AccountController extends Controller
 
     public function deleteArea(Request $request, SavedArea $area): RedirectResponse
     {
-        abort_unless($area->business_id === $request->user()->business_id, 403);
+        $this->authorize('delete', $area);
         $area->delete();
 
         return back()->with('success', 'Saved area deleted.');

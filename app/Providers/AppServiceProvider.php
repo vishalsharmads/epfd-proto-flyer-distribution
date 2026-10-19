@@ -40,12 +40,15 @@ use App\Models\SavedCard;
 use App\Models\Suburb;
 use App\Models\SupportThread;
 use App\Models\User;
+use App\Policies\BusinessOwnedPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -65,6 +68,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Settings::apply();
+        if ($proxies = config('epfd.trusted_proxies')) {
+            TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', (string) $proxies)));
+        }
+        if ($this->app->isProduction()) {
+            URL::forceHttps();
+        }
         Model::shouldBeStrict(! $this->app->isProduction());
         Model::preventLazyLoading(false);
 
@@ -100,6 +109,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Super admins bypass every permission check.
         Gate::before(fn (User $user) => $user->hasRole('super_admin') ? true : null);
+        foreach ([Invoice::class, SavedArea::class, SavedCard::class, SupportThread::class] as $businessOwned) {
+            Gate::policy($businessOwned, BusinessOwnedPolicy::class);
+        }
 
         RateLimiter::for('api', fn (Request $r) => Limit::perMinute(120)->by($r->user()?->id ?: $r->ip()));
         RateLimiter::for('estimate', fn (Request $r) => Limit::perMinute(240)->by($r->user()?->id ?: $r->ip()));

@@ -15,6 +15,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([RolesSeeder::class, CatalogueSeeder::class, ContentSeeder::class]);
 
+        // Demo accounts all share the password "password", so they never go into production.
+        // Create the first production admin with `php artisan epfd:make-admin`.
+        if (app()->isProduction()) {
+            return;
+        }
+
         // Staff: one user per admin role. Password for every seeded account: "password".
         foreach (['super_admin' => ['admin@epfd.test', 'Avery Admin'], 'operations' => ['ops@epfd.test', 'Olivia Operations'], 'finance' => ['finance@epfd.test', 'Felix Finance'], 'support' => ['support@epfd.test', 'Sam Support']] as $role => [$email, $name]) {
             User::updateOrCreate(['email' => $email], ['name' => $name, 'password' => 'password', 'email_verified_at' => now()])->syncRoles([$role]);
