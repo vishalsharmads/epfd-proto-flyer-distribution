@@ -16,10 +16,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddressLayer, type AddressStatus } from './draw/AddressLayer';
 import { AreaFocusMask } from './draw/AreaFocusMask';
 import { DrawOverlay, type OverlayArea, type Phase } from './draw/DrawOverlay';
+import { PinActions } from './draw/PinActions';
 import { TerraDrawLayer } from './draw/TerraDrawLayer';
 import { geodesicCircle } from './geometry/circle';
 import { bounds, fromPolygon, pointInPolygon, toPolygon } from './geometry/polygon';
 import { requestEstimate, requestSplit, useLiveEstimate, type EstimateOptions, type SplitPiece } from './hooks/estimate';
+import { useEditHistory } from './hooks/useEditHistory';
 import { isTypingTarget, storageGet, storageSet } from './hooks/useMapTick';
 import { Combobox } from './panels/Combobox';
 import { DRAW_MODES, DrawModeMenu } from './panels/DrawModeMenu';
@@ -83,6 +85,10 @@ let seq = 0;
 const newKey = () => `area-${Date.now().toString(36)}-${seq++}`;
 
 /** Phones: the panel is a full-width bottom sheet, so popovers open above it rather than to the side (off-screen). */
+const samePoints = (a: LngLat[], b: LngLat[]) => a.length === b.length && a.every((p, i) => p[0] === b[i][0] && p[1] === b[i][1]);
+/** Touch screens get a larger grab radius when picking a pin. */
+const coarsePointer = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+
 const narrowViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 
 export default function AudienceBuilder({
@@ -117,6 +123,13 @@ export default function AudienceBuilder({
     const [houses, setHouses] = useState(includeHouses || !includeUnits);
     const [units, setUnits] = useState(includeUnits);
     const [edit, setEdit] = useState<EditState | null>(null);
+    const editRef = useRef(edit);
+    editRef.current = edit;
+    /** Pins as they were when the area was opened: Esc asks before throwing changes away. */
+    const originalPoints = useRef<LngLat[]>([]);
+    const [selectedPin, setSelectedPin] = useState<number | null>(null);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
+    const history = useEditHistory(edit?.key ?? null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [modeMenuOpen, setModeMenuOpen] = useState(false);
     const [lastMode, setLastMode] = useState<DrawMode>(() => (storageGet(MODE_KEY) as DrawMode | null) ?? 'pins');
@@ -129,7 +142,10 @@ export default function AudienceBuilder({
     const [splitting, setSplitting] = useState(false);
     const [splitPreview, setSplitPreview] = useState<SplitPiece[] | null>(null);
 
-    const opts: EstimateOptions = useMemo(() => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }), [houses, units, coverage, material, pickup]);
+    const opts: EstimateOptions = useMemo(
+        () => ({ includeHouses: houses, includeUnits: units, coverage, material, pickup }),
+        [houses, units, coverage, material, pickup],
+    );
     /** "My areas" for the address menu: the selected area while editing, otherwise every saved area (none while drawing). */
     const editingClosed = edit?.phase === 'editing' && edit.points.length >= 3;
     const est = useLiveEstimate(edit?.phase === 'editing' ? edit.points : null, opts, radiusKm);
@@ -142,10 +158,16 @@ export default function AudienceBuilder({
     /** "Whole map" wins over "In my areas" (it already includes them). */
     const addressesShown = rail.addressesAll || (rail.addressesInAreas && !!focus);
     useEffect(() => {
-        storageSet(ADDRESS_PREFS_KEY, JSON.stringify({ addressesInAreas: rail.addressesInAreas, addressesAll: rail.addressesAll, fadeOutside: rail.fadeOutside }));
+        storageSet(
+            ADDRESS_PREFS_KEY,
+            JSON.stringify({ addressesInAreas: rail.addressesInAreas, addressesAll: rail.addressesAll, fadeOutside: rail.fadeOutside }),
+        );
     }, [rail.addressesInAreas, rail.addressesAll, rail.fadeOutside]);
     const overlayAreas: OverlayArea[] = useMemo(() => areas.map((a, index) => ({ ...a, index, color: areaColor(index) })), [areas]);
-    const radiusRing = useMemo(() => (pickup && !readOnly ? geodesicCircle([pickup.lng, pickup.lat], radiusKm, 64) : null), [pickup, radiusKm, readOnly]);
+    const radiusRing = useMemo(
+        () => (pickup && !readOnly ? geodesicCircle([pickup.lng, pickup.lat], radiusKm, 64) : null),
+        [pickup, radiusKm, readOnly],
+    );
 
     /* ---------------- map lifecycle ---------------- */
     useEffect(() => {
@@ -155,7 +177,13 @@ export default function AudienceBuilder({
         let instance: MapProvider | null = null;
         const allPts = [...initialAreas.flatMap((a) => fromPolygon(a.geometry)), ...(tracks ?? []).flatMap((t) => t.points)];
         const center: LngLat = pickup ? [pickup.lng, pickup.lat] : allPts.length ? (bounds(allPts).slice(0, 2) as LngLat) : [151.0, -33.85];
-        createProvider(engine ?? cfg.provider, { container: el, center, zoom: 14, config: cfg, dark: document.documentElement.classList.contains('dark') })
+        createProvider(engine ?? cfg.provider, {
+            container: el,
+            center,
+            zoom: 14,
+            config: cfg,
+            dark: document.documentElement.classList.contains('dark'),
+        })
             .then(async (p) => {
                 instance = p;
                 if (disposed) return p.destroy();
@@ -242,7 +270,18 @@ export default function AudienceBuilder({
             storageSet(MODE_KEY, m);
             setMarker(null);
             const n = areas.length + 1;
-            setEdit({ key: newKey(), isNew: true, name: admin ? `Run ${n}` : `Run area ${n}`, mode: m, phase: phaseFor(m), points: [], suburb_id: null, approximate: false });
+            originalPoints.current = [];
+            setSelectedPin(null);
+            setEdit({
+                key: newKey(),
+                isNew: true,
+                name: admin ? `Run ${n}` : `Run area ${n}`,
+                mode: m,
+                phase: phaseFor(m),
+                points: [],
+                suburb_id: null,
+                approximate: false,
+            });
         },
         [areas.length, admin],
     );
@@ -259,22 +298,91 @@ export default function AudienceBuilder({
             if (readOnly) return;
             const a = areas.find((x) => x.key === key);
             if (!a) return;
-            setEdit({ key, isNew: false, name: a.name, mode: a.draw_mode, phase: 'editing', points: fromPolygon(a.geometry), suburb_id: a.suburb_id ?? null, approximate: !!a.approximate });
+            originalPoints.current = fromPolygon(a.geometry);
+            setSelectedPin(null);
+            setEdit({
+                key,
+                isNew: false,
+                name: a.name,
+                mode: a.draw_mode,
+                phase: 'editing',
+                points: fromPolygon(a.geometry),
+                suburb_id: a.suburb_id ?? null,
+                approximate: !!a.approximate,
+            });
         },
         [areas, readOnly],
     );
 
     const cancel = useCallback(() => {
         provider?.setInteractive(true);
+        setConfirmDiscard(false);
+        setSelectedPin(null);
         setEdit(null);
     }, [provider]);
 
     const setPoints = useCallback((points: LngLat[]) => setEdit((e) => (e ? { ...e, points } : e)), []);
 
+    /** A finished change to the pins of a closed area: one undo step. */
+    const changePoints = useCallback(
+        (next: LngLat[]) => {
+            const e = editRef.current;
+            if (e?.phase === 'editing' && !samePoints(e.points, next)) history.record(e.points);
+            setPoints(next);
+        },
+        [history, setPoints],
+    );
+    const undo = useCallback(() => {
+        const e = editRef.current;
+        const prev = e?.phase === 'editing' ? history.undo(e.points) : null;
+        if (prev) {
+            setSelectedPin(null);
+            setPoints(prev);
+            setAnnounce('Undone.');
+        }
+    }, [history, setPoints]);
+    const redo = useCallback(() => {
+        const e = editRef.current;
+        const next = e?.phase === 'editing' ? history.redo(e.points) : null;
+        if (next) {
+            setSelectedPin(null);
+            setPoints(next);
+            setAnnounce('Redone.');
+        }
+    }, [history, setPoints]);
+    const removePin = useCallback(
+        (i: number) => {
+            const e = editRef.current;
+            if (!e || e.points.length <= 3) {
+                setAnnounce('An area needs at least 3 pins.');
+                return;
+            }
+            changePoints(e.points.filter((_, k) => k !== i));
+            setSelectedPin(null);
+            setAnnounce('Pin removed.');
+        },
+        [changePoints],
+    );
+    /** Esc / Cancel: leave straight away when nothing changed, otherwise ask first. */
+    const requestCancel = useCallback(() => {
+        const e = editRef.current;
+        const changed = !!e && (e.isNew ? e.points.length > 0 : !samePoints(e.points, originalPoints.current));
+        if (changed) setConfirmDiscard(true);
+        else cancel();
+    }, [cancel]);
+
     const closePolygon = useCallback(() => setEdit((e) => (e && e.points.length >= 3 ? { ...e, phase: 'editing' } : e)), []);
 
     const overLimit = !!est.data && !est.error && est.data.estimate.distance_km > maxWalkKm;
-    const canDone = !!edit && edit.phase === 'editing' && edit.points.length >= 3 && !!est.data && !est.loading && !est.error && !est.data.estimate.no_letterboxes && !overLimit;
+    const canDone =
+        !!edit &&
+        edit.phase === 'editing' &&
+        edit.points.length >= 3 &&
+        !!est.data &&
+        !est.loading &&
+        !est.error &&
+        !est.data.estimate.no_letterboxes &&
+        !overLimit;
 
     const done = useCallback(() => {
         if (!edit || !canDone || !est.data) return;
@@ -311,7 +419,16 @@ export default function AudienceBuilder({
     /** Replace the area being edited with the split pieces, each saved with its own estimate. */
     const applySplit = () => {
         if (!edit || !splitPreview) return;
-        const pieces: Area[] = splitPreview.map((p) => ({ key: newKey(), name: p.name, draw_mode: edit.mode, suburb_id: null, approximate: false, geometry: p.geometry, estimate: p.estimate, quote: admin ? null : p.quote }));
+        const pieces: Area[] = splitPreview.map((p) => ({
+            key: newKey(),
+            name: p.name,
+            draw_mode: edit.mode,
+            suburb_id: null,
+            approximate: false,
+            geometry: p.geometry,
+            estimate: p.estimate,
+            quote: admin ? null : p.quote,
+        }));
         setAreas((list) => {
             const at = list.findIndex((a) => a.key === edit.key);
             if (at < 0) return [...list, ...pieces];
@@ -361,7 +478,13 @@ export default function AudienceBuilder({
         let live = true;
         for (const a of areas.filter((x) => !x.estimate)) {
             requestEstimate(a.geometry, opts)
-                .then((r) => live && setAreas((list) => list.map((x) => (x.key === a.key && !x.estimate ? { ...x, estimate: r.estimate, quote: admin ? null : r.quote } : x))))
+                .then(
+                    (r) =>
+                        live &&
+                        setAreas((list) =>
+                            list.map((x) => (x.key === a.key && !x.estimate ? { ...x, estimate: r.estimate, quote: admin ? null : r.quote } : x)),
+                        ),
+                )
                 .catch(() => undefined);
         }
         return () => {
@@ -374,7 +497,18 @@ export default function AudienceBuilder({
         try {
             const b = await api<{ geometry: GeoJsonPolygon; approximate: boolean; name: string }>(`/api/v1/suburbs/${s.id}/boundary`);
             const pts = fromPolygon(b.geometry);
-            setEdit((e) => (e ? { ...e, phase: 'editing', points: pts, suburb_id: s.id, approximate: b.approximate, name: /^Run (area )?\d+$/.test(e.name) ? s.name : e.name } : e));
+            setEdit((e) =>
+                e
+                    ? {
+                          ...e,
+                          phase: 'editing',
+                          points: pts,
+                          suburb_id: s.id,
+                          approximate: b.approximate,
+                          name: /^Run (area )?\d+$/.test(e.name) ? s.name : e.name,
+                      }
+                    : e,
+            );
             provider?.fitBounds(bounds(pts), 60);
         } catch {
             setAnnounce('Could not load that suburb boundary. Try again or draw the area instead.');
@@ -398,18 +532,73 @@ export default function AudienceBuilder({
     };
     useEffect(() => provider?.on('click', (e) => clickRef.current(e.lngLat)), [provider]);
 
+    /*
+     * Tap or click on a pin while editing selects it (Remove pin / Delete key); a tap elsewhere clears it.
+     * Listened for on the map element itself: the map engine sends no click event when a drawing handle is hit.
+     */
+    const tapRef = useRef<(x: number, y: number) => void>(() => undefined);
+    tapRef.current = (x, y) => {
+        const e = editRef.current;
+        if (!provider || e?.phase !== 'editing') return;
+        let best: number | null = null;
+        let bestD = coarsePointer() ? 24 : 14;
+        e.points.forEach((p, i) => {
+            const q = provider.project(p);
+            const d = Math.hypot(q.x - x, q.y - y);
+            if (d <= bestD) [best, bestD] = [i, d];
+        });
+        setSelectedPin(best);
+    };
+    useEffect(() => {
+        const el = mapRef.current;
+        if (!el) return;
+        let down: { x: number; y: number; t: number } | null = null;
+        const onDown = (ev: PointerEvent) => {
+            down = ev.isPrimary ? { x: ev.clientX, y: ev.clientY, t: ev.timeStamp } : null;
+        };
+        const onUp = (ev: PointerEvent) => {
+            if (!down || ev.button > 0) return;
+            const moved = Math.hypot(ev.clientX - down.x, ev.clientY - down.y);
+            if (moved < 6 && ev.timeStamp - down.t < 600) {
+                const r = el.getBoundingClientRect();
+                tapRef.current(ev.clientX - r.left, ev.clientY - r.top);
+            }
+            down = null;
+        };
+        el.addEventListener('pointerdown', onDown, true);
+        el.addEventListener('pointerup', onUp, true);
+        return () => {
+            el.removeEventListener('pointerdown', onDown, true);
+            el.removeEventListener('pointerup', onUp, true);
+        };
+    }, [provider]);
+
     /* ---------------- keyboard ---------------- */
     const keyRef = useRef<(e: KeyboardEvent) => void>(() => undefined);
     keyRef.current = (e) => {
-        if (readOnly || tourOpen || confirmKey || splitPreview || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (readOnly || tourOpen || confirmKey || confirmDiscard || splitPreview || e.defaultPrevented) return;
         const t = e.target as HTMLElement | null;
         const typing = isTypingTarget(t);
+        // Undo / redo pin changes: Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z or Ctrl+Y.
+        if ((e.metaKey || e.ctrlKey) && !e.altKey && !typing && edit?.phase === 'editing') {
+            const k = e.key.toLowerCase();
+            if (k === 'z' || k === 'y') {
+                e.preventDefault();
+                if (k === 'y' || e.shiftKey) redo();
+                else undo();
+            }
+            return;
+        }
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
         const onControl = !!t && ['BUTTON', 'A'].includes(t.tagName) && t.dataset.testid !== 'add-area';
         if (e.key === 'Escape') {
             if (menuOpen || modeMenuOpen) return; // Radix closes the popover
-            if (edit) {
+            if (selectedPin !== null) {
                 e.preventDefault();
-                cancel();
+                setSelectedPin(null);
+            } else if (edit) {
+                e.preventDefault();
+                requestCancel();
             }
             return;
         }
@@ -435,7 +624,8 @@ export default function AudienceBuilder({
                 setPoints(edit.points.slice(0, -1));
             } else if (edit?.phase === 'editing') {
                 e.preventDefault();
-                requestDelete();
+                if (selectedPin !== null) removePin(selectedPin);
+                else requestDelete();
             }
         }
     };
@@ -450,7 +640,10 @@ export default function AudienceBuilder({
         const e = est.data?.estimate;
         if (est.error) setAnnounce(est.error);
         else if (e?.no_letterboxes) setAnnounce('No letterboxes detected. Redraw to try again.');
-        else if (e) setAnnounce(`Estimated ${num(e.total)} letterboxes: ${num(e.houses)} houses, ${num(e.units)} units${!admin && est.data?.quote ? `, fee ${money(est.data.quote.total_cents)}` : ''}.`);
+        else if (e)
+            setAnnounce(
+                `Estimated ${num(e.total)} letterboxes: ${num(e.houses)} houses, ${num(e.units)} units${!admin && est.data?.quote ? `, fee ${money(est.data.quote.total_cents)}` : ''}.`,
+            );
     }, [est.data, est.error, admin]);
 
     /* ---------------- derived UI ---------------- */
@@ -462,13 +655,28 @@ export default function AudienceBuilder({
             return 'Click the first pin or press Enter to close the area · Backspace removes the last pin';
         }
         if (edit.phase === 'tracing') return 'Press and drag to trace your area';
-        if (terra && edit.phase === 'editing') return 'Drag pins to reshape · drag + to add a pin · right-click a pin to remove it';
+        if (edit.phase === 'editing')
+            return narrowViewport()
+                ? 'Drag pins to reshape · tap a pin to remove it'
+                : 'Drag pins to reshape · drag + to add a pin · tap a pin to remove it · Ctrl+Z undo';
         if (edit.phase === 'suburb') return 'Search for a suburb in the panel';
         return null;
     })();
-    const addrHint = addressesShown && addr ? (addr.zoomedOut ? 'Zoom in to see addresses' : addr.capped ? `Showing first ${num(addr.count)} addresses — zoom in for more` : addr.error ? 'Addresses unavailable right now' : null) : null;
+    const addrHint =
+        addressesShown && addr
+            ? addr.zoomedOut
+                ? 'Zoom in to see addresses'
+                : addr.capped
+                  ? `Showing first ${num(addr.count)} addresses — zoom in for more`
+                  : addr.error
+                    ? 'Addresses unavailable right now'
+                    : null
+            : null;
 
-    const summary: Summary = { ...totals, per_item_cents: totals.fee_cents != null && totals.letterboxes ? totals.fee_cents / totals.letterboxes : null };
+    const summary: Summary = {
+        ...totals,
+        per_item_cents: totals.fee_cents != null && totals.letterboxes ? totals.fee_cents / totals.letterboxes : null,
+    };
     const editIndex = edit ? areas.findIndex((a) => a.key === edit.key) : -1;
     const modeInfo = DRAW_MODES.find((m) => m.mode === (edit?.mode ?? lastMode))!;
 
@@ -480,19 +688,34 @@ export default function AudienceBuilder({
     );
 
     return (
-        <div ref={rootRef} className={cn('relative isolate h-full min-h-[480px] w-full overflow-hidden bg-surface-2', className)} data-testid="audience-builder">
+        <div
+            ref={rootRef}
+            className={cn('relative isolate h-full min-h-[480px] w-full overflow-hidden bg-surface-2', className)}
+            data-testid="audience-builder"
+        >
             <div className="absolute inset-0 z-0" data-tour="map">
-                <div ref={mapRef} className="size-full" role="application" aria-label="Map. Use the panels or Suburb mode to build areas with the keyboard." />
+                <div
+                    ref={mapRef}
+                    className="size-full"
+                    role="application"
+                    aria-label="Map. Use the panels or Suburb mode to build areas with the keyboard."
+                />
             </div>
             {!provider && !mapError && (
                 <div className="absolute inset-0 z-[1] grid place-items-center">
                     <Loader2 className="size-6 animate-spin text-subtle" aria-label="Loading map" />
                 </div>
             )}
-            {mapError && <p className="absolute inset-x-0 top-1/3 z-[1] text-center text-sm text-muted">The map could not be loaded. Refresh the page to try again.</p>}
+            {mapError && (
+                <p className="absolute inset-x-0 top-1/3 z-[1] text-center text-sm text-muted">
+                    The map could not be loaded. Refresh the page to try again.
+                </p>
+            )}
 
             {provider && rail.fadeOutside && focus && <AreaFocusMask provider={provider} areas={focus} />}
-            {provider && addressesShown && <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={rail.addressesAll ? null : focus} />}
+            {provider && addressesShown && (
+                <AddressLayer provider={provider} minZoom={cfg.viewport_min_zoom ?? 16} onStatus={setAddr} clip={rail.addressesAll ? null : focus} />
+            )}
             {provider && (
                 <DrawOverlay
                     provider={provider}
@@ -508,11 +731,20 @@ export default function AudienceBuilder({
                     marker={marker}
                     readOnly={readOnly}
                     admin={admin}
-                    onPointsChange={setPoints}
+                    onPointsChange={changePoints}
                     onClose={closePolygon}
                     onTraceComplete={(pts) => setEdit((e) => (e ? { ...e, points: pts, phase: 'editing' } : e))}
                     onSelectArea={startEdit}
                     onDeleteRequest={requestDelete}
+                />
+            )}
+            {provider && edit?.phase === 'editing' && selectedPin !== null && edit.points[selectedPin] && (
+                <PinActions
+                    provider={provider}
+                    point={edit.points[selectedPin]}
+                    canRemove={edit.points.length > 3}
+                    onRemove={() => removePin(selectedPin)}
+                    onDismiss={() => setSelectedPin(null)}
                 />
             )}
             {provider && terra && (
@@ -521,14 +753,18 @@ export default function AudienceBuilder({
                     phase={edit?.phase ?? null}
                     points={edit?.points ?? []}
                     color={areaColor(editIndex >= 0 ? editIndex : areas.length)}
-                    onPointsChange={setPoints}
+                    onPointsChange={changePoints}
                     onComplete={(pts) => setEdit((e) => (e ? { ...e, points: pts, phase: 'editing' } : e))}
                 />
             )}
 
             {readOnly ? (
                 areas.length > 0 && (
-                    <ul className="pointer-events-auto absolute top-3 left-3 z-20 flex max-w-[calc(100%-5rem)] flex-col gap-1 rounded-[14px] border border-border bg-surface/95 p-2.5 text-xs shadow-md backdrop-blur" aria-label="Legend" data-testid="map-legend">
+                    <ul
+                        className="pointer-events-auto absolute top-3 left-3 z-20 flex max-w-[calc(100%-5rem)] flex-col gap-1 rounded-[14px] border border-border bg-surface/95 p-2.5 text-xs shadow-md backdrop-blur"
+                        aria-label="Legend"
+                        data-testid="map-legend"
+                    >
                         {overlayAreas.map((a) => (
                             <li key={a.key} className="flex items-center gap-2 text-fg">
                                 <span className="size-2.5 shrink-0 rounded-full" style={{ background: a.color }} aria-hidden />
@@ -546,33 +782,38 @@ export default function AudienceBuilder({
                     </ul>
                 )
             ) : (
-            <LeftPanel
-                areas={overlayAreas}
-                includeHouses={houses}
-                includeUnits={units}
-                onToggle={toggleAudience}
-                busy={!!edit}
-                readOnly={readOnly}
-                admin={admin}
-                onCancel={cancel}
-                onSelect={startEdit}
-                onDelete={(k) => setConfirmKey(k)}
-                totals={totals}
-                maxWalkKm={maxWalkKm}
-                footer={<div className="md:hidden">{footer}</div>}
-                addAreaSlot={
-                    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                        <PopoverAnchor asChild>
-                            <div>
-                                <AddAreaButton onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} />
-                            </div>
-                        </PopoverAnchor>
-                        <PopoverContent side={narrowViewport() ? 'top' : 'right'} align="start" sideOffset={narrowViewport() ? 8 : 16} collisionPadding={12}>
-                            <DrawModeMenu selected={lastMode} onPick={startNew} />
-                        </PopoverContent>
-                    </Popover>
-                }
-            />
+                <LeftPanel
+                    areas={overlayAreas}
+                    includeHouses={houses}
+                    includeUnits={units}
+                    onToggle={toggleAudience}
+                    busy={!!edit}
+                    readOnly={readOnly}
+                    admin={admin}
+                    onCancel={requestCancel}
+                    onSelect={startEdit}
+                    onDelete={(k) => setConfirmKey(k)}
+                    totals={totals}
+                    maxWalkKm={maxWalkKm}
+                    footer={<div className="md:hidden">{footer}</div>}
+                    addAreaSlot={
+                        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                            <PopoverAnchor asChild>
+                                <div>
+                                    <AddAreaButton onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} />
+                                </div>
+                            </PopoverAnchor>
+                            <PopoverContent
+                                side={narrowViewport() ? 'top' : 'right'}
+                                align="start"
+                                sideOffset={narrowViewport() ? 8 : 16}
+                                collisionPadding={12}
+                            >
+                                <DrawModeMenu selected={lastMode} onPick={startNew} />
+                            </PopoverContent>
+                        </Popover>
+                    }
+                />
             )}
 
             {/* right panel: editing card or totals */}
@@ -590,12 +831,17 @@ export default function AudienceBuilder({
                         onDone={done}
                         onRedraw={() => switchMode(edit.mode)}
                         coords={edit.points}
-                        onCoordsChange={setPoints}
+                        onCoordsChange={changePoints}
+                        history={{ canUndo: history.canUndo, canRedo: history.canRedo, onUndo: undo, onRedo: redo }}
                         overLimit={overLimit ? { maxKm: maxWalkKm, onSplit: split, splitting } : null}
                         drawModeSlot={
                             <Popover open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
                                 <PopoverTrigger asChild>
-                                    <button type="button" className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-fg hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus" data-testid="draw-mode-button">
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-fg hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus"
+                                        data-testid="draw-mode-button"
+                                    >
                                         <modeInfo.icon className="size-3.5" aria-hidden /> Draw mode: {modeInfo.title}
                                         <ChevronDown className="size-3.5 text-muted" aria-hidden />
                                     </button>
@@ -611,7 +857,9 @@ export default function AudienceBuilder({
                                 placeholder="Suburb or postcode, e.g. Rydalmere"
                                 testId="suburb-search"
                                 autoFocus
-                                fetcher={(q, signal) => api<{ data: SuburbHit[] }>(`/api/v1/suburbs?q=${encodeURIComponent(q)}`, { signal }).then((r) => r.data)}
+                                fetcher={(q, signal) =>
+                                    api<{ data: SuburbHit[] }>(`/api/v1/suburbs?q=${encodeURIComponent(q)}`, { signal }).then((r) => r.data)
+                                }
                                 getKey={(s) => s.id}
                                 render={(s) => (
                                     <span className="flex items-center justify-between gap-2">
@@ -644,15 +892,23 @@ export default function AudienceBuilder({
             />
 
             {/* hint pills */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-[calc(55%+12px)] z-10 flex flex-col items-center gap-2 px-4 md:bottom-16">
+            <div className="pointer-events-none absolute inset-x-0 bottom-[calc(21%+12px)] z-10 flex flex-col items-center gap-2 px-4 md:bottom-16">
                 {hint && !readOnly && (
-                    <p className="rounded-full bg-ink-900/90 px-4 py-2 text-center text-sm font-medium text-white shadow-lg backdrop-blur dark:bg-white/90 dark:text-ink-900" data-testid="draw-hint">
+                    <p
+                        className="rounded-full bg-ink-900/90 px-4 py-2 text-center text-sm font-medium text-white shadow-lg backdrop-blur dark:bg-white/90 dark:text-ink-900"
+                        data-testid="draw-hint"
+                    >
                         {hint}
                     </p>
                 )}
-                {addrHint && <p className="rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-fg shadow-md">{addrHint}</p>}
+                {addrHint && (
+                    <p className="rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-fg shadow-md">{addrHint}</p>
+                )}
                 {addressesShown && addr && !addr.zoomedOut && (
-                    <p className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs text-fg shadow-md" aria-label="Address legend">
+                    <p
+                        className="flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs text-fg shadow-md"
+                        aria-label="Address legend"
+                    >
                         <span className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-[var(--map-house)]" aria-hidden /> House
                         </span>
@@ -663,18 +919,27 @@ export default function AudienceBuilder({
                 )}
             </div>
 
-            <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-7 md:flex">{footer}</div>
+            <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 bg-gradient-to-t from-surface-2/90 to-transparent px-4 pt-6 pb-7 md:flex">
+                {footer}
+            </div>
 
             {!readOnly && <Tour open={tourOpen} onClose={() => setTourOpen(false)} root={rootRef.current} />}
 
             <Dialog open={!!splitPreview} onOpenChange={(o) => !o && setSplitPreview(null)}>
                 {splitPreview && (
-                    <DialogContent title={`Split into ${splitPreview.length} areas`} description={`Each area stays within the ${km(maxWalkKm)} walking limit. Letterboxes and fees are recalculated per area.`}>
+                    <DialogContent
+                        title={`Split into ${splitPreview.length} areas`}
+                        description={`Each area stays within the ${km(maxWalkKm)} walking limit. Letterboxes and fees are recalculated per area.`}
+                    >
                         <ul className="mt-4 flex max-h-[50vh] flex-col divide-y divide-border overflow-y-auto" data-testid="split-preview">
                             {splitPreview.map((p, i) => (
                                 <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
                                     <span className="flex min-w-0 items-center gap-2 font-medium text-fg">
-                                        <span className="size-2.5 shrink-0 rounded-full" style={{ background: areaColor((editIndex >= 0 ? editIndex : areas.length) + i) }} aria-hidden />
+                                        <span
+                                            className="size-2.5 shrink-0 rounded-full"
+                                            style={{ background: areaColor((editIndex >= 0 ? editIndex : areas.length) + i) }}
+                                            aria-hidden
+                                        />
                                         <span className="truncate">{p.name}</span>
                                     </span>
                                     <span className="shrink-0 text-muted tabular-nums">
@@ -696,14 +961,41 @@ export default function AudienceBuilder({
                 )}
             </Dialog>
 
-            <Dialog open={!!confirmKey} onOpenChange={(o) => !o && setConfirmKey(null)}>
-                {confirmKey && (
-                    <DialogContent title="Delete this area?" description={`${areas.find((a) => a.key === confirmKey)?.name ?? 'This area'} will be removed from your audience.`}>
+            <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+                {confirmDiscard && edit && (
+                    <DialogContent
+                        title={edit.isNew ? 'Discard this area?' : 'Discard your changes?'}
+                        description={
+                            edit.isNew ? 'The pins you placed will be removed.' : `${edit.name} goes back to how it was before you started editing.`
+                        }
+                    >
                         <div className="mt-4 flex justify-end gap-2">
                             <DialogClose asChild>
-                                <Button variant="secondary">Keep area</Button>
+                                <Button variant="secondary" autoFocus>
+                                    Keep editing
+                                </Button>
                             </DialogClose>
-                            <Button variant="danger" onClick={() => deleteArea(confirmKey)} data-testid="confirm-delete" autoFocus>
+                            <Button variant="danger" onClick={cancel} data-testid="confirm-discard">
+                                Discard
+                            </Button>
+                        </div>
+                    </DialogContent>
+                )}
+            </Dialog>
+
+            <Dialog open={!!confirmKey} onOpenChange={(o) => !o && setConfirmKey(null)}>
+                {confirmKey && (
+                    <DialogContent
+                        title="Delete this area?"
+                        description={`${areas.find((a) => a.key === confirmKey)?.name ?? 'This area'} will be removed from your audience.`}
+                    >
+                        <div className="mt-4 flex justify-end gap-2">
+                            <DialogClose asChild>
+                                <Button variant="secondary" autoFocus>
+                                    Keep area
+                                </Button>
+                            </DialogClose>
+                            <Button variant="danger" onClick={() => deleteArea(confirmKey)} data-testid="confirm-delete">
                                 Delete area
                             </Button>
                         </div>

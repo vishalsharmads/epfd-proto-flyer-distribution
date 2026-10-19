@@ -120,7 +120,10 @@ export function TerraDrawLayer({ provider, phase, points, color, onPointsChange,
         let draw: TerraDraw | null = null;
         const hex = color as HexColor;
         const style = { fillColor: hex, fillOpacity: 0.18, outlineColor: hex, outlineWidth: 3 };
-        const editable = { feature: { draggable: true, coordinates: { midpoints: true, draggable: true, deletable: true } } };
+        // Pins and midpoints are draggable; the area itself is not, so pressing inside it pans the map
+        // instead of accidentally moving the whole area.
+        const editable = { feature: { draggable: false, coordinates: { midpoints: true, draggable: true, deletable: true } } };
+        const touch = !!window.matchMedia?.('(pointer: coarse)').matches;
 
         createAdapter(provider).then((adapter) => {
             if (disposed) return;
@@ -147,10 +150,10 @@ export function TerraDrawLayer({ provider, phase, points, color, onPointsChange,
                             selectionPointColor: '#ffffff',
                             selectionPointOutlineColor: hex,
                             selectionPointOutlineWidth: 2,
-                            selectionPointWidth: 6,
+                            selectionPointWidth: touch ? 10 : 6,
                             midPointColor: hex,
                             midPointOutlineColor: '#ffffff',
-                            midPointWidth: 4,
+                            midPointWidth: touch ? 7 : 4,
                         },
                     }),
                 ],

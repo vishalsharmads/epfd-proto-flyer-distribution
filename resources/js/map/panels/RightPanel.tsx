@@ -2,13 +2,27 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/surface';
 import { cn, km, money, num, perItem } from '@/lib/utils';
 import type { LngLat } from '@/types';
-import { Building2, ChevronDown, House, Loader2, MapPinned, Minus, Pencil, Plus, Receipt, Scissors, Shapes } from 'lucide-react';
+import { Building2, ChevronDown, House, Loader2, MapPinned, Minus, Pencil, Plus, Receipt, Redo2, Scissors, Shapes, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { EstimateState } from '../hooks/estimate';
 
 const shell = 'pointer-events-auto rounded-[16px] border border-border bg-surface shadow-lg';
 
-function Row({ icon, label, value, testId, sub, strong }: { icon?: ReactNode; label: string; value: ReactNode; testId?: string; sub?: ReactNode; strong?: boolean }) {
+function Row({
+    icon,
+    label,
+    value,
+    testId,
+    sub,
+    strong,
+}: {
+    icon?: ReactNode;
+    label: string;
+    value: ReactNode;
+    testId?: string;
+    sub?: ReactNode;
+    strong?: boolean;
+}) {
     return (
         <div className="flex items-start justify-between gap-3 py-1.5">
             <div className="flex items-start gap-2">
@@ -59,7 +73,13 @@ function StatsBlock({ s, admin, loading }: { s: Summary; admin?: boolean; loadin
             <div className="divide-y divide-border">
                 <Row icon={<House className="size-4" aria-hidden />} label="Houses" value={v(num(s.houses))} testId="stat-houses" />
                 <Row icon={<Building2 className="size-4" aria-hidden />} label="Units" value={v(num(s.units))} testId="stat-units" />
-                <Row icon={<Shapes className="size-4" aria-hidden />} label="Distance" sub="Estimated walking route" value={v(km(s.distance_km))} testId="stat-distance" />
+                <Row
+                    icon={<Shapes className="size-4" aria-hidden />}
+                    label="Distance"
+                    sub="Estimated walking route"
+                    value={v(km(s.distance_km))}
+                    testId="stat-distance"
+                />
                 {!admin && (
                     <Row
                         icon={<Receipt className="size-4" aria-hidden />}
@@ -86,6 +106,8 @@ interface EditingProps {
     approximate?: boolean;
     onDone: () => void;
     onRedraw: () => void;
+    /** Undo / redo of pin changes while editing (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z). */
+    history?: { canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void };
     drawModeSlot: ReactNode;
     suburbSlot?: ReactNode;
     coords: LngLat[];
@@ -149,7 +171,13 @@ export function EditingPanel(p: EditingProps) {
                     ) : (
                         <>
                             <h3 className="min-w-0 truncate text-lg font-semibold tracking-tight text-fg">{p.name}</h3>
-                            <button type="button" onClick={() => setRenaming(true)} className="grid size-8 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-focus" aria-label="Rename area" data-testid="rename-area">
+                            <button
+                                type="button"
+                                onClick={() => setRenaming(true)}
+                                className="grid size-8 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-2 focus-visible:outline-focus"
+                                aria-label="Rename area"
+                                data-testid="rename-area"
+                            >
                                 <Pencil className="size-4" aria-hidden />
                             </button>
                         </>
@@ -159,7 +187,10 @@ export function EditingPanel(p: EditingProps) {
 
                 {p.phase === 'suburb' && p.suburbSlot && <div className="mt-3">{p.suburbSlot}</div>}
                 {p.approximate && p.phase === 'editing' && (
-                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-fg" data-testid="approximate-chip">
+                    <p
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-fg"
+                        data-testid="approximate-chip"
+                    >
                         <MapPinned className="size-3.5" aria-hidden /> Approximate boundary — adjust the pins if needed
                     </p>
                 )}
@@ -186,8 +217,15 @@ export function EditingPanel(p: EditingProps) {
                         ) : p.overLimit && e ? (
                             <Alert tone="warning" title={`${km(e.distance_km)} walk · over the ${km(p.overLimit.maxKm)} limit`} className="mb-3">
                                 <p>One distributor walks each area. Split it into smaller areas to continue.</p>
-                                <Button size="sm" className="mt-2" onClick={p.overLimit.onSplit} disabled={p.overLimit.splitting} data-testid="split-area">
-                                    {p.overLimit.splitting ? <Loader2 className="animate-spin" aria-hidden /> : <Scissors aria-hidden />} {p.overLimit.splitting ? 'Splitting…' : 'Split area'}
+                                <Button
+                                    size="sm"
+                                    className="mt-2"
+                                    onClick={p.overLimit.onSplit}
+                                    disabled={p.overLimit.splitting}
+                                    data-testid="split-area"
+                                >
+                                    {p.overLimit.splitting ? <Loader2 className="animate-spin" aria-hidden /> : <Scissors aria-hidden />}{' '}
+                                    {p.overLimit.splitting ? 'Splitting…' : 'Split area'}
                                 </Button>
                             </Alert>
                         ) : null}
@@ -198,16 +236,57 @@ export function EditingPanel(p: EditingProps) {
                                 </span>
                             )}
                             <StatsBlock s={s} admin={p.admin} loading={p.est.loading && !p.est.data} />
-                            {!p.admin && p.est.data && !p.est.data.fee_available && !e?.no_letterboxes && p.est.data.message && <p className="mt-2 text-xs text-muted">{p.est.data.message}</p>}
+                            {!p.admin && p.est.data && !p.est.data.fee_available && !e?.no_letterboxes && p.est.data.message && (
+                                <p className="mt-2 text-xs text-muted">{p.est.data.message}</p>
+                            )}
                         </div>
                         <CoordinateEditor points={p.coords} onChange={p.onCoordsChange} />
                     </div>
                 )}
-                {p.phase === 'drawing' && p.pointsCount > 0 && <p className="mt-3 text-sm text-muted">{p.pointsCount} pin{p.pointsCount === 1 ? '' : 's'} placed. Close the area to see the estimate.</p>}
+                {p.phase === 'drawing' && p.pointsCount > 0 && (
+                    <p className="mt-3 text-sm text-muted">
+                        {p.pointsCount} pin{p.pointsCount === 1 ? '' : 's'} placed. Close the area to see the estimate.
+                    </p>
+                )}
             </div>
             {p.phase === 'editing' && (
-                <div className="border-t border-border p-3">
-                    <Button variant="ink" size="lg" kbd="Enter" className="w-full" disabled={!p.canDone} onClick={p.onDone} data-testid="done-button" data-tour="done">
+                <div className="flex gap-2 border-t border-border p-3">
+                    {p.history && (
+                        <>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                onClick={p.history.onUndo}
+                                disabled={!p.history.canUndo}
+                                aria-label="Undo (Ctrl+Z)"
+                                title="Undo (Ctrl+Z)"
+                                data-testid="undo-button"
+                            >
+                                <Undo2 />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                onClick={p.history.onRedo}
+                                disabled={!p.history.canRedo}
+                                aria-label="Redo (Shift+Ctrl+Z)"
+                                title="Redo (Shift+Ctrl+Z)"
+                                data-testid="redo-button"
+                            >
+                                <Redo2 />
+                            </Button>
+                        </>
+                    )}
+                    <Button
+                        variant="ink"
+                        size="lg"
+                        kbd="Enter"
+                        className="flex-1"
+                        disabled={!p.canDone}
+                        onClick={p.onDone}
+                        data-testid="done-button"
+                        data-tour="done"
+                    >
                         Done
                     </Button>
                 </div>
@@ -228,7 +307,14 @@ function CoordinateEditor({ points, onChange }: { points: LngLat[]; onChange: (p
     };
     return (
         <div className="mt-3 border-t border-border pt-2">
-            <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="coord-editor" className="flex w-full items-center justify-between rounded-[8px] py-1.5 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-focus" data-testid="edit-coordinates">
+            <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                aria-expanded={open}
+                aria-controls="coord-editor"
+                className="flex w-full items-center justify-between rounded-[8px] py-1.5 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-focus"
+                data-testid="edit-coordinates"
+            >
                 Edit coordinates
                 <ChevronDown className={cn('size-4 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
             </button>
@@ -240,8 +326,22 @@ function CoordinateEditor({ points, onChange }: { points: LngLat[]; onChange: (p
                             <span className="w-5 text-xs text-muted tabular-nums" aria-hidden>
                                 {i + 1}
                             </span>
-                            <input type="number" step="0.00001" aria-label={`Pin ${i + 1} longitude`} value={p[0]} onChange={(e) => set(i, 0, e.target.value)} className="h-8 min-w-0 flex-1 rounded-[8px] border border-border-strong bg-surface px-2 text-xs text-fg tabular-nums focus:border-primary focus:outline-none" />
-                            <input type="number" step="0.00001" aria-label={`Pin ${i + 1} latitude`} value={p[1]} onChange={(e) => set(i, 1, e.target.value)} className="h-8 min-w-0 flex-1 rounded-[8px] border border-border-strong bg-surface px-2 text-xs text-fg tabular-nums focus:border-primary focus:outline-none" />
+                            <input
+                                type="number"
+                                step="0.00001"
+                                aria-label={`Pin ${i + 1} longitude`}
+                                value={p[0]}
+                                onChange={(e) => set(i, 0, e.target.value)}
+                                className="h-8 min-w-0 flex-1 rounded-[8px] border border-border-strong bg-surface px-2 text-xs text-fg tabular-nums focus:border-primary focus:outline-none"
+                            />
+                            <input
+                                type="number"
+                                step="0.00001"
+                                aria-label={`Pin ${i + 1} latitude`}
+                                value={p[1]}
+                                onChange={(e) => set(i, 1, e.target.value)}
+                                className="h-8 min-w-0 flex-1 rounded-[8px] border border-border-strong bg-surface px-2 text-xs text-fg tabular-nums focus:border-primary focus:outline-none"
+                            />
                             <button
                                 type="button"
                                 aria-label={`Add pin after pin ${i + 1}`}
@@ -255,7 +355,13 @@ function CoordinateEditor({ points, onChange }: { points: LngLat[]; onChange: (p
                             >
                                 <Plus className="size-3.5" aria-hidden />
                             </button>
-                            <button type="button" aria-label={`Remove pin ${i + 1}`} disabled={points.length <= 3} onClick={() => onChange(points.filter((_, j) => j !== i))} className="grid size-7 place-items-center rounded-full text-muted hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-30">
+                            <button
+                                type="button"
+                                aria-label={`Remove pin ${i + 1}`}
+                                disabled={points.length <= 3}
+                                onClick={() => onChange(points.filter((_, j) => j !== i))}
+                                className="grid size-7 place-items-center rounded-full text-muted hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-30"
+                            >
                                 <Minus className="size-3.5" aria-hidden />
                             </button>
                         </fieldset>
