@@ -74,7 +74,7 @@ describe('design studio (web)', function () {
         expect($order->status)->toBe('submitted')->and($order->paid_at)->not->toBeNull()
             ->and($order->payments()->where('status', 'succeeded')->value('payable_type'))->toBe('design_order')
             ->and($order->invoice->total_cents)->toBe(17996);
-        Mail::assertSent(InvoiceMail::class);
+        Mail::assertQueued(InvoiceMail::class);
         $this->get("/app/jobs/design/{$order->id}")->assertOk();
         $this->get('/app/jobs')->assertOk()->assertSee('DSN-');
 
@@ -87,7 +87,7 @@ describe('design studio (web)', function () {
         $this->post("/admin/design-orders/{$order->id}/status", ['status' => 'in_design'])->assertSessionHas('success');
         $this->post("/admin/design-orders/{$order->id}/proofs", ['file' => UploadedFile::fake()->image('proof.png', 620, 874), 'note' => 'First concept'])->assertSessionHas('success');
         expect($order->fresh()->status)->toBe('proof_ready')->and($order->fresh()->latestProofVersion())->toBe(1);
-        Mail::assertSent(DesignProofReadyMail::class, fn ($m) => $m->order->is($order) && $m->proof->version === 1);
+        Mail::assertQueued(DesignProofReadyMail::class, fn ($m) => $m->order->is($order) && $m->proof->version === 1);
 
         // Business: request changes (uses the one included revision).
         $this->actingAs($user);
@@ -226,4 +226,19 @@ describe('design rate card', function () {
         RateCard::create(['name' => 'Legacy', 'is_active' => true, 'data' => $card]);
         $this->postJson('/api/v1/pricing/design/quote', ['design_type' => 'stationery', 'package' => 'premium'])->assertOk()->assertJsonPath('data.subtotal_cents', 54900);
     });
+});
+
+it('survives the queue: the invoice email serialises, renders and attaches the PDF', function () {
+    $user = businessUser();
+    $order = paidDesignOrder($this, $user);
+    $invoice = $order->payments()->firstOrFail()->invoice;
+
+    // What a queue worker does: serialise the mailable (models become identifiers), then restore it.
+    $mail = unserialize(serialize(new InvoiceMail($invoice, $user->name, 'Design order', url('/'))));
+    $pdf = $mail->attachments()[0];
+
+    expect($mail->invoice->is($invoice))->toBeTrue()
+        ->and($mail->render())->toContain($invoice->number)
+        ->and($pdf->as)->toBe("{$invoice->number}.pdf")
+        ->and($pdf->attachWith(fn () => null, fn (Closure $data) => $data()))->toStartWith('%PDF');
 });

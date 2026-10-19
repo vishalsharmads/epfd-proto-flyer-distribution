@@ -97,8 +97,9 @@ Route::middleware('auth:sanctum')->name('api.')->group(function () {
     Route::get('support/threads/{thread}', [SupportController::class, 'show'])->whereNumber('thread')->name('support.threads.show');
     Route::post('support/threads/{thread}/messages', [SupportController::class, 'reply'])->whereNumber('thread')->name('support.threads.reply');
 
-    // --- Distributor stubs (users with is_distributor = true) ---------------------------------
+    // --- Distributor app (users with is_distributor = true) ------------------------------------
     Route::get('runs/available', [DistributorRunController::class, 'available'])->name('runs.available');
+    Route::get('runs/mine', [DistributorRunController::class, 'mine'])->name('runs.mine');
     Route::post('runs/{run}/claim', [DistributorRunController::class, 'claim'])->whereNumber('run')->name('runs.claim');
     Route::post('runs/{run}/gps', [DistributorRunController::class, 'gps'])->whereNumber('run')->name('runs.gps');
     Route::post('runs/{run}/submit', [DistributorRunController::class, 'submit'])->whereNumber('run')->name('runs.submit');

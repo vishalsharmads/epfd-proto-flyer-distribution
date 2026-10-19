@@ -6,11 +6,15 @@ namespace App\Mail;
 
 use App\Http\Controllers\App\Support\Documents;
 use App\Models\Invoice;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailables\Attachment;
 
 /** "Payment received" email with the GST tax invoice attached as a PDF. */
-final class InvoiceMail extends BrandedMail
+final class InvoiceMail extends BrandedMail implements ShouldQueue
 {
+    /** Sent by a queue worker once the surrounding transaction has committed, so the order it describes exists. */
+    public $afterCommit = true;
+
     public function __construct(public readonly Invoice $invoice, public readonly string $name, public readonly string $jobName, public readonly string $jobUrl) {}
 
     protected function subjectLine(): string

@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'abr' => [
+        'guid' => env('ABR_GUID'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Business;
 use App\Models\User;
+use App\Rules\Abn;
 use App\Services\AbnLookupService;
 use App\Support\Audit;
 use App\Support\Geo;
@@ -26,12 +27,16 @@ class RegisterController extends Controller
         return Inertia::render('auth/register', ['industries' => RegisterRequest::INDUSTRIES]);
     }
 
-    /** ABN stub lookup for the inline "Registered to …" hint. */
+    /** ABN lookup (Australian Business Register) for the inline "Registered to …" hint. */
     public function abn(Request $request, AbnLookupService $abr): JsonResponse
     {
-        $hit = $abr->lookup((string) $request->query('abn'));
+        $abn = (string) $request->query('abn');
+        if (! Abn::valid($abn)) {
+            return response()->json(['message' => 'Enter a valid 11-digit ABN.'], 422);
+        }
+        $hit = $abr->lookup($abn);
 
-        return $hit ? response()->json(['data' => $hit]) : response()->json(['message' => 'Enter a valid 11-digit ABN.'], 422);
+        return $hit ? response()->json(['data' => $hit]) : response()->json(['message' => 'We could not find that ABN on the Australian Business Register.'], 404);
     }
 
     public function store(RegisterRequest $request): RedirectResponse

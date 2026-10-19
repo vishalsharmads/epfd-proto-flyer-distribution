@@ -19,9 +19,10 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Distributor app stubs. Requires a user with `is_distributor = true`.
+ * Distributor app: find and claim published runs, upload the GPS track while delivering, and submit.
+ * Requires a user with `is_distributor = true`.
  *
- * @tags Distributor (stub)
+ * @tags Distributor
  */
 class RunController extends Controller
 {
@@ -49,6 +50,19 @@ class RunController extends Controller
         }
 
         return RunResource::collection($q->paginate($this->perPage($request)));
+    }
+
+    /** Runs allocated to you that are not finished yet, soonest deadline first (`?status=completed` for history). */
+    public function mine(Request $request): AnonymousResourceCollection
+    {
+        $user = $this->ensureDistributor($request);
+        $data = $request->validate(['status' => ['nullable', 'in:allocated,collected,in_delivery,completed']]);
+        $q = Run::query()->withGeoJson()->where('distributor_id', $user->id);
+        isset($data['status'])
+            ? $q->where('status', $data['status'])
+            : $q->whereIn('status', ['allocated', 'collected', 'in_delivery']);
+
+        return RunResource::collection($q->orderBy('deadline')->paginate($this->perPage($request)));
     }
 
     /** Claim a published run (→ allocated to you). 409 if already taken. */
