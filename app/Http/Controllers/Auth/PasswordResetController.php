@@ -17,6 +17,7 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class PasswordResetController extends Controller
 {
@@ -27,15 +28,27 @@ class PasswordResetController extends Controller
 
     public function email(Request $request): RedirectResponse
     {
-        $request->validate(['email' => ['required', 'email']]);
-
-        Password::sendResetLink($request->only('email'), function (User $user, string $token) {
-            $url = url(route('password.reset', ['token' => $token, 'email' => $user->email], false));
-            Mail::to($user->email)->send(new ResetPasswordMail($user->name, $url));
-        });
+        $data = $request->validate(['email' => ['required', 'email']]);
+        self::sendLink($data['email']);
 
         // Same response whether or not the account exists (no user enumeration).
         return back()->with('status', 'If an account exists for that email, a reset link is on its way. Check your inbox.');
+    }
+
+    /**
+     * Email a reset link if the account exists. The broker limits one link per account per minute
+     * (auth.passwords.users.throttle). Shared by the web form and the API.
+     */
+    public static function sendLink(string $email): void
+    {
+        Password::sendResetLink(['email' => mb_strtolower(trim($email))], function (User $user, string $token) {
+            $url = url(route('password.reset', ['token' => $token, 'email' => $user->email], false));
+            try {
+                Mail::to($user->email)->send(new ResetPasswordMail($user->name, $url));
+            } catch (TransportExceptionInterface $e) {
+                report($e);
+            }
+        });
     }
 
     public function edit(Request $request, string $token): Response
@@ -48,11 +61,15 @@ class PasswordResetController extends Controller
         $request->validate([
             'token' => ['required'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
-        $status = Password::reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password) {
+        $credentials = [...$request->only('password', 'password_confirmation', 'token'), 'email' => mb_strtolower(trim((string) $request->input('email')))];
+        $status = Password::reset($credentials, function (User $user, string $password) {
+            // A new password hash signs out every other browser session (AuthenticateSession) and the
+            // new remember token ends "remember me" logins; API tokens are revoked here.
             $user->forceFill(['password' => $password, 'remember_token' => Str::random(60)])->save();
+            $user->tokens()->delete();
             event(new PasswordReset($user));
         });
 

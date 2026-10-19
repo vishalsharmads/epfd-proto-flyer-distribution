@@ -50,6 +50,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -74,6 +75,11 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->isProduction()) {
             URL::forceHttps();
         }
+        // One password policy for registration, reset, account changes and the API. In production, passwords
+        // found in public breaches are refused (haveibeenpwned, k-anonymity: the password never leaves the server).
+        Password::defaults(fn () => $this->app->isProduction()
+            ? Password::min(8)->letters()->numbers()->uncompromised()
+            : Password::min(8)->letters()->numbers());
         Model::shouldBeStrict(! $this->app->isProduction());
         Model::preventLazyLoading(false);
 

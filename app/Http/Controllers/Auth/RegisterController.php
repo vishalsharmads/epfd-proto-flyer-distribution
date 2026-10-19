@@ -70,7 +70,9 @@ class RegisterController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
         Audit::log('business.registered', $user->business);
-        OtpController::issue($user);
+        if (! OtpController::issue($user)) {
+            return redirect()->route('verify.otp')->with('warning', "Your account is ready, but we couldn't send the verification email. Use \"Send a new code\" in a minute.");
+        }
 
         return redirect()->route('verify.otp')->with('success', "We've emailed a 6-digit code to {$user->email}.");
     }

@@ -55,6 +55,7 @@ final class ProblemJson
         'pricing_unknown_design_type' => [422, 'Unknown design service. Valid keys are listed by GET /design/services (admin-managed).'],
         'pricing_unknown_package' => [422, 'Unknown design package, or the service has no price for it. See GET /design/services.'],
         'webhook_signature_invalid' => [400, 'Webhook signature missing or invalid.'],
+        'mail_unavailable' => [503, 'The email could not be sent right now; retry shortly.'],
         'refund_failed' => [502, 'The payment gateway rejected the refund.'],
         'server_error' => [500, 'Unexpected error. The `instance` id is logged.'],
     ];

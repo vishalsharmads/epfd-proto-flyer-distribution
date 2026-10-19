@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\DomainProblem;
+use App\Http\Controllers\Auth\OtpController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
-use App\Mail\OtpCodeMail;
-use App\Mail\ResetPasswordMail;
 use App\Models\Business;
 use App\Models\User;
 use App\Rules\Abn;
@@ -16,21 +17,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 /**
  * @tags Auth
  */
 class AuthController extends Controller
 {
-    private const OTP_TTL_MINUTES = 10;
-
-    private const OTP_MAX_ATTEMPTS = 5;
-
     /**
      * Register a business + owner user.
      *
@@ -41,6 +35,7 @@ class AuthController extends Controller
      */
     public function register(Request $request): JsonResponse
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
         $data = $request->validate([
             'business_name' => ['required', 'string', 'max:120'],
             'contact_name' => ['required', 'string', 'max:120'],
@@ -49,7 +44,7 @@ class AuthController extends Controller
             'abn' => ['nullable', 'string', new Abn],
             'industry' => ['nullable', 'string', 'max:80'],
             'address' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', PasswordRule::min(8)],
+            'password' => ['required', 'string', PasswordRule::defaults()],
             'device_name' => ['nullable', 'string', 'max:100'],
             'accept_terms' => ['accepted'],
         ]);
@@ -75,13 +70,14 @@ class AuthController extends Controller
             ]);
         });
 
-        $this->sendOtp($user);
+        $sent = OtpController::issue($user);
         Audit::log('business.registered', $user->business);
 
         return response()->json([
             'token' => $user->createToken($data['device_name'] ?? 'api')->plainTextToken,
             'user' => UserResource::make($user->load('business')),
             'otp_required' => true,
+            'otp_sent' => $sent,
         ], 201);
     }
 
@@ -133,7 +129,7 @@ class AuthController extends Controller
         return response()->json(['data' => UserResource::make($request->user()->load('business'))]);
     }
 
-    /** Verify the 6-digit e-mail OTP (max 5 attempts, valid 10 minutes). */
+    /** Verify the 6-digit e-mail OTP (max 5 attempts per code, valid 10 minutes). */
     public function verifyOtp(Request $request): JsonResponse
     {
         $data = $request->validate(['code' => ['required', 'digits:6']]);
@@ -142,7 +138,7 @@ class AuthController extends Controller
         if ($user->email_verified_at) {
             return response()->json(['message' => 'Already verified.', 'verified' => true]);
         }
-        if (! $user->otp_hash || ! $user->otp_expires_at || $user->otp_expires_at->isPast() || $user->otp_attempts >= self::OTP_MAX_ATTEMPTS) {
+        if (! $user->otp_hash || ! $user->otp_expires_at || $user->otp_expires_at->isPast() || $user->otp_attempts >= OtpController::MAX_ATTEMPTS) {
             throw ValidationException::withMessages(['code' => ['The code has expired. Request a new one.']]);
         }
         if (! Hash::check($data['code'], $user->otp_hash)) {
@@ -154,15 +150,22 @@ class AuthController extends Controller
         return response()->json(['message' => 'E-mail verified.', 'verified' => true]);
     }
 
-    /** Send a fresh OTP to the user's e-mail. */
+    /** Send a fresh OTP to the user's e-mail. At most one per minute: 429 `rate_limited` with `retry_after` otherwise. */
     public function resendOtp(Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $request->user();
-        if (! $user->email_verified_at) {
-            $this->sendOtp($user);
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Already verified.', 'verified' => true]);
+        }
+        if ($wait = OtpController::resendWait($user)) {
+            throw new DomainProblem('rate_limited', "Please wait {$wait} seconds before requesting another code.", 429, 'Too many requests', ['retry_after' => $wait]);
+        }
+        if (! OtpController::issue($user)) {
+            throw new DomainProblem('mail_unavailable', "We couldn't send the email just now. Try again in a minute.", 503, 'Email unavailable');
         }
 
-        return response()->json(['message' => 'If verification is pending, a new code has been sent.']);
+        return response()->json(['message' => 'A new code has been sent.']);
     }
 
     /**
@@ -173,29 +176,8 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         $data = $request->validate(['email' => ['required', 'email']]);
-        $user = User::where('email', strtolower($data['email']))->first();
-        if ($user) {
-            $token = Password::broker()->createToken($user);
-            $url = url('/reset-password/'.$token.'?email='.urlencode($user->email));
-            rescue(fn () => Mail::to($user->email)->send(new ResetPasswordMail($user->name, $url)), report: true);
-        }
+        PasswordResetController::sendLink($data['email']);
 
         return response()->json(['message' => 'If that e-mail is registered, a reset link has been sent.']);
-    }
-
-    private function sendOtp(User $user): void
-    {
-        $code = (string) random_int(100000, 999999);
-        $user->forceFill([
-            'otp_hash' => Hash::make($code),
-            'otp_expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
-            'otp_attempts' => 0,
-        ])->save();
-        try {
-            Mail::to($user->email)->send(new OtpCodeMail($user->name, $code));
-        } catch (Throwable $e) {
-            report($e);
-            Mail::raw("Your EPFD verification code is {$code}. It expires in ".self::OTP_TTL_MINUTES.' minutes.', fn ($m) => $m->to($user->email)->subject('Your EPFD verification code'));
-        }
     }
 }

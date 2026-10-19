@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
@@ -26,6 +27,17 @@ abstract class TestCase extends BaseTestCase
             $this->prepareDatabase();
             self::$prepared = true;
         }
+    }
+
+    /**
+     * actingAs() only swaps the user, while a real login (SessionGuard::login) also records the new user's
+     * password hash in the session. Without this, switching users mid-test trips AuthenticateSession.
+     */
+    public function be(Authenticatable $user, $guard = null): static
+    {
+        $this->app['session.store']->forget('password_hash_'.($guard ?? config('auth.defaults.guard')));
+
+        return parent::be($user, $guard);
     }
 
     private function prepareDatabase(): void

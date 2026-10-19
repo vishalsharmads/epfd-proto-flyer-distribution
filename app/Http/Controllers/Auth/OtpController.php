@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /** Email OTP: 6 digits, hashed, 10-minute expiry, 5 attempts, resend throttled to once per 60 s. */
 class OtpController extends Controller
@@ -25,7 +26,11 @@ class OtpController extends Controller
 
     public const RESEND_SECONDS = 60;
 
-    public static function issue(User $user): void
+    /**
+     * Create a new code and email it. Returns false when the email could not be sent (the code is still
+     * saved, so a later resend works); the failure is reported to error tracking.
+     */
+    public static function issue(User $user): bool
     {
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $user->forceFill([
@@ -34,7 +39,21 @@ class OtpController extends Controller
             'otp_attempts' => 0,
         ])->save();
         RateLimiter::hit(self::resendKey($user), self::RESEND_SECONDS);
-        Mail::to($user->email)->send(new OtpCodeMail($user->name, $code));
+        try {
+            Mail::to($user->email)->send(new OtpCodeMail($user->name, $code));
+        } catch (TransportExceptionInterface $e) {
+            report($e);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /** Seconds until another code may be sent, or 0. */
+    public static function resendWait(User $user): int
+    {
+        return RateLimiter::tooManyAttempts(self::resendKey($user), 1) ? RateLimiter::availableIn(self::resendKey($user)) : 0;
     }
 
     private static function resendKey(User $user): string
@@ -51,7 +70,7 @@ class OtpController extends Controller
 
         return Inertia::render('auth/verify-otp', [
             'email' => $user->email,
-            'resend_in' => RateLimiter::availableIn(self::resendKey($user)) * (RateLimiter::tooManyAttempts(self::resendKey($user), 1) ? 1 : 0),
+            'resend_in' => self::resendWait($user),
             'expires_at' => $user->otp_expires_at?->toIso8601String(),
         ]);
     }
@@ -88,11 +107,12 @@ class OtpController extends Controller
         if ($user->email_verified_at !== null) {
             return redirect()->route('app.dashboard');
         }
-        if (RateLimiter::tooManyAttempts(self::resendKey($user), 1)) {
-            $s = RateLimiter::availableIn(self::resendKey($user));
-            throw ValidationException::withMessages(['code' => "Please wait {$s} seconds before requesting another code."]);
+        if ($wait = self::resendWait($user)) {
+            throw ValidationException::withMessages(['code' => "Please wait {$wait} seconds before requesting another code."]);
         }
-        self::issue($user);
+        if (! self::issue($user)) {
+            throw ValidationException::withMessages(['code' => "We couldn't send the email just now. Please try again in a minute."]);
+        }
 
         return back()->with('success', 'A new code is on its way.');
     }

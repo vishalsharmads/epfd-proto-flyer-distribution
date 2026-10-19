@@ -42,7 +42,7 @@ class RegisterRequest extends FormRequest
             'state' => ['nullable', 'in:ACT,NSW,NT,QLD,SA,TAS,VIC,WA,OT'],
             'industry' => ['required', 'in:'.implode(',', self::INDUSTRIES)],
             'abn' => ['nullable', new Abn],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::defaults()],
             'terms' => ['accepted'],
         ];
     }
